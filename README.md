@@ -2,10 +2,8 @@
 
 ## Quick Install (Ubuntu 24.04)
 
-**One-liner installation:**
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/install.sh -o install.sh && sudo bash install.sh
 ```
 
 This automated installer will:
@@ -30,7 +28,7 @@ This automated installer will:
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/uninstall.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
 ```
 
 ---
