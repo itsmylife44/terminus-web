@@ -45,8 +45,14 @@ export interface OpenCodeSessionDetail extends OpenCodeSession {
 export interface OpenCodeProvider {
   id: string;
   name: string;
+  isConnected?: boolean;
+  supportsOAuth?: boolean;
   // Add other provider properties as needed
   [key: string]: unknown;
+}
+
+export interface ProviderAuthPayload {
+  apiKey: string;
 }
 
 export class OpenCodeAPIClient {
@@ -187,6 +193,45 @@ export class OpenCodeAPIClient {
       headers: this.getHeaders(),
     });
     return this.handleResponse<OpenCodeTodo[]>(response);
+  }
+
+  /**
+   * Set API key for a provider
+   * @param providerId Provider ID to set auth for
+   * @param apiKey API key to set
+   */
+  public async setProviderAuth(providerId: string, apiKey: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/auth/${providerId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ apiKey }),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  /**
+   * Remove provider authentication
+   * @param providerId Provider ID to remove auth for
+   */
+  public async removeProviderAuth(providerId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/auth/${providerId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  /**
+   * Initiate OAuth flow for a provider
+   * @param providerId Provider ID to authorize
+   * @returns OAuth authorization URL
+   */
+  public async initiateOAuth(providerId: string): Promise<{ url: string }> {
+    const response = await fetch(`${this.baseUrl}/provider/${providerId}/oauth/authorize`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ url: string }>(response);
   }
 }
 
