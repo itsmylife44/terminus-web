@@ -5,7 +5,7 @@
 **One-liner installation:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/install.sh | sudo bash
 ```
 
 This automated installer will:
@@ -30,7 +30,7 @@ This automated installer will:
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/uninstall.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.1/scripts/uninstall.sh | sudo bash
 ```
 
 ---
