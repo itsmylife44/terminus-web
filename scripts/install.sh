@@ -29,6 +29,7 @@ OPENCODE_PATH=""
 SSL_EMAIL=""
 USE_HTTPS=false
 OPENCODE_VERSION="latest"
+OPENCODE_PASSWORD=""
 
 cleanup_on_error() {
     echo -e "${RED}[ERROR]${NC} Installation failed at line $1" >&2
@@ -52,6 +53,10 @@ log_error() {
 
 log_warning() {
     echo -e "${YELLOW}[!]${NC} $1"
+}
+
+generate_password() {
+    openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20
 }
 
 print_banner() {
@@ -176,11 +181,14 @@ gather_user_input() {
     else
         log_warning "OpenCode not found at: $OPENCODE_PATH"
         log_warning "OpenCode will be installed automatically during setup"
-    fi
-    
-    # Confirmation
-    echo
-    echo -e "${CYAN}Configuration Summary:${NC}"
+     fi
+     
+     OPENCODE_PASSWORD=$(generate_password)
+     log_success "Generated secure password for web authentication"
+     
+     # Confirmation
+     echo
+     echo -e "${CYAN}Configuration Summary:${NC}"
     echo "  Domain/IP: $DOMAIN"
     echo "  HTTPS: $([ "$USE_HTTPS" = true ] && echo "Enabled (${SSL_EMAIL})" || echo "Disabled")"
     echo "  OpenCode: $OPENCODE_PATH"
@@ -389,14 +397,16 @@ module.exports = {
       cwd: '/home/$TERMINUS_USER',
       script: '$OPENCODE_PATH',
       args: 'serve --port 3001 --hostname 0.0.0.0',
-      env: {
-        NODE_ENV: 'production'
-      },
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '512M',
-      error_file: '/var/log/pm2/opencode-serve-error.log',
+       env: {
+         NODE_ENV: 'production',
+         OPENCODE_SERVER_PASSWORD: '$OPENCODE_PASSWORD',
+         OPENCODE_SERVER_USERNAME: 'admin'
+       },
+       instances: 1,
+       autorestart: true,
+       watch: false,
+       max_memory_restart: '512M',
+       error_file: '/var/log/pm2/opencode-serve-error.log',
       out_file: '/var/log/pm2/opencode-serve-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
@@ -566,10 +576,16 @@ print_summary() {
     echo -e "${GREEN}║                                                ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     echo
-    echo -e "${CYAN}Access your terminal:${NC}"
-    echo -e "  ${GREEN}${PROTOCOL}://${DOMAIN}${NC}"
-    echo
-    echo -e "${CYAN}Architecture:${NC}"
+     echo -e "${CYAN}Access your terminal:${NC}"
+     echo -e "  ${GREEN}${PROTOCOL}://${DOMAIN}${NC}"
+     echo
+     echo -e "${CYAN}Login Credentials:${NC}"
+     echo -e "  Username: ${GREEN}admin${NC}"
+     echo -e "  Password: ${GREEN}${OPENCODE_PASSWORD}${NC}"
+     echo
+     echo -e "${YELLOW}  ⚠️  SAVE THIS PASSWORD - it will not be shown again!${NC}"
+     echo
+     echo -e "${CYAN}Architecture:${NC}"
     echo -e "  Browser -> Caddy -> Next.js (port 3000)"
     echo -e "  Browser -> Caddy -> OpenCode serve (port 3001, /pty/* routes)"
     echo
