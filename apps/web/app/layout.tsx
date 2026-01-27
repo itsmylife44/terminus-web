@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ReduxProvider } from "@/lib/store/provider";
+import AuthGate from "@/components/layout/AuthGate";
 
 export const metadata: Metadata = {
   title: "Terminus Web",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased min-h-screen font-sans">
-        <ReduxProvider>{children}</ReduxProvider>
+        <ReduxProvider>
+          <AuthGate>{children}</AuthGate>
+        </ReduxProvider>
       </body>
     </html>
   );
