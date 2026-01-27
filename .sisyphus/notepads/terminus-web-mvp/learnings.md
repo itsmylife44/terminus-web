@@ -47,3 +47,24 @@
 - Learnings: 
   - `shrink-0` is vital for headers/footers in flex-col layouts to prevent squishing by xterm canvas.
   - `w-screen h-screen` on the root container is more reliable than `100vh` for full-screen web apps to avoid scrollbar jitter.
+
+## Task 11: PM2 Configuration and Development Scripts
+- Created `ecosystem.config.js` for PM2 process management with two apps:
+  - `terminus-web`: Runs Next.js frontend on port 3000 with `NEXT_PUBLIC_WS_URL=ws://localhost:3001`
+  - `terminus-pty`: Runs WebSocket PTY server on port 3001 with `OPENCODE_PATH=/usr/local/bin/opencode`
+- Created `scripts/dev.sh` for concurrent development mode:
+  - Starts both services in background with process tracking
+  - Implements trap handler for graceful Ctrl+C cleanup (kills both PIDs)
+  - Pattern: `(cd apps/pty-server && npm run dev) &` + store PID + trap cleanup
+- Created `scripts/install-opencode.sh` for Ubuntu 24.04:
+  - Installs `build-essential` and `python3` (required for node-pty native compilation)
+  - Uses official OpenCode install script: `curl -fsSL https://opencode.ai/install | bash`
+  - Verifies installation with `opencode --version`
+- Updated root `package.json` with process management scripts:
+  - `npm run dev` → runs `./scripts/dev.sh` (concurrent development)
+  - `npm run start` → `pm2 start ecosystem.config.js` (production)
+  - `npm run pm2:start|stop|restart|logs` → PM2 control commands
+- **Critical pattern**: Root package.json orchestrates monorepo, individual workspace package.jsons handle their own dev/build/start
+- **TLS note**: PM2 config documents that production WSS requires nginx/Caddy reverse proxy with TLS termination (not implemented in Node.js directly)
+- Verification: All shell scripts validated with `bash -n`, ecosystem.config.js parses cleanly, scripts are executable (chmod +x)
+- **Lesson**: PM2 ecosystem config is deployment infrastructure, not application code - operational comments are necessary for DevOps setup

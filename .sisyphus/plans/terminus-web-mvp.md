@@ -946,7 +946,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 11. PM2 Configuration and Development Scripts
+- [x] 11. PM2 Configuration and Development Scripts
 
   **What to do**:
   - Create `ecosystem.config.js` for PM2
