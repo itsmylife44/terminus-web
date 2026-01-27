@@ -341,6 +341,10 @@ build_application() {
     log_step "Installing dependencies and building application..."
     log_warning "This may take several minutes..."
     
+    # Update npm to latest version
+    log_step "Updating npm to latest version..."
+    npm install -g npm@latest
+    
     su - "$TERMINUS_USER" -c "cd $INSTALL_DIR && npm install"
     su - "$TERMINUS_USER" -c "cd $INSTALL_DIR && npm run build"
     

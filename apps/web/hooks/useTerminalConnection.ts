@@ -3,15 +3,21 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Terminal } from 'ghostty-web';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { setConnectionStatus, setError, setExitCode, resetReconnectAttempts, incrementReconnectAttempts } from '@/lib/store/terminalSlice';
+import {
+  setConnectionStatus,
+  setError,
+  setExitCode,
+  resetReconnectAttempts,
+  incrementReconnectAttempts,
+} from '@/lib/store/terminalSlice';
 
-export function useTerminalConnection(terminal: Terminal | null) {
+export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: string) {
   const dispatch = useAppDispatch();
   const { reconnectAttempts, connectionStatus } = useAppSelector((state) => state.terminal);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManuallyClosedRef = useRef(false);
-  const ptyIdRef = useRef<string | null>(null);
+  const ptyIdRef = useRef<string | null>(initialPtyId || null);
 
   const connect = useCallback(async () => {
     if (!terminal) return;
@@ -34,7 +40,7 @@ export function useTerminalConnection(terminal: Terminal | null) {
 
     try {
       const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
-      
+
       const response = await fetch(`${baseUrl}/pty`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,13 +68,13 @@ export function useTerminalConnection(terminal: Terminal | null) {
       socket.onopen = async () => {
         dispatch(setConnectionStatus('connected'));
         dispatch(resetReconnectAttempts());
-        
+
         await fetch(`${baseUrl}/pty/${ptySession.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
         }).catch(() => {});
-        
+
         terminal.focus();
       };
 
@@ -101,7 +107,6 @@ export function useTerminalConnection(terminal: Terminal | null) {
           socket.send(data);
         }
       });
-
     } catch (err) {
       console.error('[PTY] Error:', err);
       dispatch(setError('Failed to create PTY session'));
@@ -112,11 +117,11 @@ export function useTerminalConnection(terminal: Terminal | null) {
   useEffect(() => {
     if (connectionStatus === 'reconnecting') {
       if (reconnectAttempts > 5) {
-         return;
+        return;
       }
 
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 16000);
-      
+
       reconnectTimeoutRef.current = setTimeout(() => {
         connect();
       }, delay);

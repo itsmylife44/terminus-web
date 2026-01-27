@@ -6,22 +6,31 @@ import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { DisconnectedOverlay } from './DisconnectedOverlay';
 import { SessionEndedOverlay } from './SessionEndedOverlay';
 import { useAppDispatch } from '@/lib/store/hooks';
-import { resetReconnectAttempts, setConnectionStatus, setExitCode } from '@/lib/store/terminalSlice';
+import {
+  resetReconnectAttempts,
+  setConnectionStatus,
+  setExitCode,
+} from '@/lib/store/terminalSlice';
 
-export function TerminalClient() {
+interface TerminalClientProps {
+  ptyId?: string;
+  isActive?: boolean;
+}
+
+export function TerminalClient({ ptyId, isActive = true }: TerminalClientProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddonRef = useRef<FitAddonType | null>(null);
   const terminalInstanceRef = useRef<TerminalType | null>(null);
   const [terminal, setTerminal] = useState<TerminalType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { connect } = useTerminalConnection(terminal);
+  const { connect } = useTerminalConnection(terminal, ptyId);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (!terminalRef.current || terminalInstanceRef.current) return;
 
     const container = terminalRef.current;
-    
+
     async function initGhostty() {
       try {
         const ghostty = await import('ghostty-web');
@@ -43,10 +52,10 @@ export function TerminalClient() {
         fitAddonRef.current = fitAddon;
         terminalInstanceRef.current = term;
         term.loadAddon(fitAddon);
-        
+
         term.open(container);
         fitAddon.fit();
-        
+
         setTerminal(term);
         setIsLoading(false);
       } catch (err) {
@@ -85,9 +94,9 @@ export function TerminalClient() {
   }, [connect, dispatch]);
 
   const handleNewSession = useCallback(() => {
-     dispatch(setExitCode(null));
-     dispatch(setConnectionStatus('connecting'));
-     connect();
+    dispatch(setExitCode(null));
+    dispatch(setConnectionStatus('connecting'));
+    connect();
   }, [connect, dispatch]);
 
   return (
