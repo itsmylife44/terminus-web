@@ -5,9 +5,7 @@
     "jsxImportSource": "react",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
     "strict": true,
     "allowJs": true,
@@ -25,6 +23,7 @@
     "app/**/*",
     "lib/**/*",
     "components/**/*",
+    "hooks/**/*",
     ".next/types/**/*.ts"
   ]
 }

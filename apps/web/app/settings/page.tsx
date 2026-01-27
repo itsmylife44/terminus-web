@@ -1,10 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-import { fetchConfig, saveConfig } from "@/lib/store/configSlice";
-import { Button } from "@/components/ui/button";
-import { Loader2, Save, Check, AlertCircle, Settings2 } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { fetchConfig, saveConfig } from '@/lib/store/configSlice';
+import { toggleAutoUpdate, showConfirmDialog } from '@/lib/store/updateSlice';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Save, Check, AlertCircle, Settings2, RefreshCw, Download } from 'lucide-react';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
+import { APP_VERSION } from '@/lib/version/versionChecker';
 
 type FormData = {
   model: string;
@@ -15,14 +19,23 @@ type FormData = {
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const { config, isLoading, isSaving, error } = useAppSelector((state) => state.config);
-  
+  const { autoUpdateEnabled, updateAvailable, latestVersion } = useAppSelector(
+    (state) => state.update
+  );
+  const {
+    updateAvailable: hookUpdateAvailable,
+    latestVersion: hookLatestVersion,
+    isLoading: versionLoading,
+  } = useVersionCheck();
+
   const [formData, setFormData] = useState<FormData>({
-    model: "",
-    theme: "dark",
-    logLevel: "info",
+    model: '',
+    theme: 'dark',
+    logLevel: 'info',
   });
-  
+
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isCheckingVersion, setIsCheckingVersion] = useState(false);
 
   useEffect(() => {
     dispatch(fetchConfig());
@@ -31,9 +44,9 @@ export default function SettingsPage() {
   useEffect(() => {
     if (config) {
       setFormData({
-        model: (config.model as string) || "",
-        theme: (config.theme as string) || "dark",
-        logLevel: (config.logLevel as string) || "info",
+        model: (config.model as string) || '',
+        theme: (config.theme as string) || 'dark',
+        logLevel: (config.logLevel as string) || 'info',
       });
     }
   }, [config]);
@@ -41,9 +54,9 @@ export default function SettingsPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setShowSuccess(false);
-    
+
     const result = await dispatch(saveConfig(formData));
-    
+
     if (saveConfig.fulfilled.match(result)) {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -53,6 +66,25 @@ export default function SettingsPage() {
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingVersion(true);
+    // Force a fresh version check by clearing cache
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('terminus_version_check');
+    }
+    // Re-trigger the version check
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsCheckingVersion(false);
+  };
+
+  const handleUpdateClick = () => {
+    dispatch(showConfirmDialog(false));
+  };
+
+  const currentDisplayVersion = updateAvailable ? latestVersion : APP_VERSION;
+  const displayUpdateAvailable = updateAvailable || hookUpdateAvailable;
+  const displayLatestVersion = latestVersion || hookLatestVersion;
 
   if (isLoading) {
     return (
@@ -68,13 +100,9 @@ export default function SettingsPage() {
       <div className="mb-12 border-l-4 border-blue-500 pl-6">
         <div className="flex items-center gap-3 mb-2">
           <Settings2 className="h-8 w-8 text-blue-500" />
-          <h1 className="text-5xl font-black tracking-tight text-white uppercase">
-            System Config
-          </h1>
+          <h1 className="text-5xl font-black tracking-tight text-white uppercase">System Config</h1>
         </div>
-        <p className="text-gray-400 text-lg font-mono">
-          Modify core OpenCode parameters
-        </p>
+        <p className="text-gray-400 text-lg font-mono">Modify core OpenCode parameters</p>
       </div>
 
       {/* Main Form Container */}
@@ -96,7 +124,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   value={formData.model}
-                  onChange={(e) => handleChange("model", e.target.value)}
+                  onChange={(e) => handleChange('model', e.target.value)}
                   placeholder="e.g., anthropic/claude-3-5-sonnet"
                   className="w-full bg-gray-950 border-2 border-gray-800 text-white px-5 py-4 text-lg font-mono
                     focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none
@@ -115,18 +143,18 @@ export default function SettingsPage() {
                   </span>
                 </label>
                 <div className="grid grid-cols-3 gap-3">
-                  {["dark", "light", "auto"].map((theme) => (
+                  {['dark', 'light', 'auto'].map((theme) => (
                     <button
                       key={theme}
                       type="button"
-                      onClick={() => handleChange("theme", theme)}
+                      onClick={() => handleChange('theme', theme)}
                       className={`
                         px-6 py-4 font-bold uppercase tracking-wider text-sm
                         border-2 transition-all duration-200
                         ${
                           formData.theme === theme
-                            ? "bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50"
-                            : "bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300"
+                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50'
+                            : 'bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300'
                         }
                       `}
                     >
@@ -147,18 +175,18 @@ export default function SettingsPage() {
                   </span>
                 </label>
                 <div className="grid grid-cols-4 gap-3">
-                  {["debug", "info", "warn", "error"].map((level) => (
+                  {['debug', 'info', 'warn', 'error'].map((level) => (
                     <button
                       key={level}
                       type="button"
-                      onClick={() => handleChange("logLevel", level)}
+                      onClick={() => handleChange('logLevel', level)}
                       className={`
                         px-6 py-4 font-bold uppercase tracking-wider text-sm
                         border-2 transition-all duration-200
                         ${
                           formData.logLevel === level
-                            ? "bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50"
-                            : "bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300"
+                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50'
+                            : 'bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300'
                         }
                       `}
                     >
@@ -216,9 +244,81 @@ export default function SettingsPage() {
         <div className="mt-6 p-4 bg-gray-900/30 border border-gray-800/50 font-mono text-xs text-gray-600">
           <div className="flex justify-between items-center">
             <span>CONFIG_PATH: ~/.opencode/config.json</span>
-            {config?.version && (
-              <span className="text-blue-500">VERSION: {config.version}</span>
-            )}
+            {config?.version && <span className="text-blue-500">VERSION: {config.version}</span>}
+          </div>
+        </div>
+
+        {/* Updates Section */}
+        <div className="mt-8 bg-gray-900/50 backdrop-blur-sm border border-gray-800 shadow-2xl">
+          <div className="p-6 border-b-2 border-gray-800">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="h-6 w-6 text-blue-500" />
+              <h2 className="text-2xl font-bold text-white uppercase tracking-wide">Updates</h2>
+            </div>
+            <p className="text-gray-400 text-sm mt-1 font-mono">Software update configuration</p>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Current Version */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                  Current Version
+                </span>
+                <p className="text-xl font-mono text-white mt-1">v{APP_VERSION}</p>
+              </div>
+              {displayUpdateAvailable && (
+                <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-sm font-semibold">
+                  v{displayLatestVersion} Available
+                </span>
+              )}
+            </div>
+
+            {/* Auto-Update Toggle */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                  Auto-Update
+                </span>
+                <p className="text-sm text-gray-600 mt-1 font-mono">
+                  Automatically update when new version is available
+                </p>
+              </div>
+              <Switch
+                checked={autoUpdateEnabled}
+                onCheckedChange={() => dispatch(toggleAutoUpdate())}
+              />
+            </div>
+
+            {/* Check for Updates Button */}
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-800">
+              <Button
+                onClick={handleCheckForUpdates}
+                disabled={isCheckingVersion || versionLoading}
+                variant="outline"
+                className="bg-gray-950 border-2 border-gray-800 text-gray-300 hover:border-gray-700 hover:text-white
+                  font-bold uppercase tracking-wider px-6 py-4 text-sm
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-200"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isCheckingVersion || versionLoading ? 'animate-spin' : ''}`}
+                />
+                Check for Updates
+              </Button>
+
+              {displayUpdateAvailable && (
+                <Button
+                  onClick={handleUpdateClick}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold uppercase tracking-wider px-6 py-4 text-sm
+                    border-2 border-blue-400 shadow-lg shadow-blue-500/30
+                    transition-all duration-200"
+                >
+                  <Download className="h-4 w-4" />
+                  Update Now
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
