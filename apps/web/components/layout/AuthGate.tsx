@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { login } from '@/lib/store/authSlice';
@@ -11,55 +11,49 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [isChecking, setIsChecking] = useState(true);
+  const hasRestoredSession = useRef(false);
 
   useEffect(() => {
-    const checkAuth = () => {
-      // If already authenticated in Redux, we're good
-      if (isAuthenticated) {
-        setIsChecking(false);
-        // If we're on login page and authenticated, redirect to home
-        if (pathname === '/login') {
-          router.replace('/');
-        }
-        return;
-      }
-
-      // Check if we have credentials in sessionStorage (persistence)
-      // This handles page reloads where Redux state is reset but session remains
+    // Only restore session once on mount
+    if (!hasRestoredSession.current && !isAuthenticated) {
       if (typeof window !== 'undefined') {
         const storedAuth = sessionStorage.getItem('opencode_auth');
         if (storedAuth) {
           try {
             const { username, password } = JSON.parse(storedAuth);
             if (username && password) {
-              // Restore session
               dispatch(login({ username, password }));
-              setIsChecking(false);
-              return;
+              hasRestoredSession.current = true;
             }
           } catch (e) {
-            // Invalid JSON, ignore
             sessionStorage.removeItem('opencode_auth');
           }
         }
       }
+    }
+    hasRestoredSession.current = true;
+  }, [dispatch, isAuthenticated]);
 
-      // Allow access to login page without auth
-      if (pathname === '/login') {
-        setIsChecking(false);
-        return;
+  useEffect(() => {
+    // Handle routing based on auth state
+    if (pathname === '/login') {
+      setIsChecking(false);
+      if (isAuthenticated) {
+        router.replace('/');
       }
+      return;
+    }
 
-      // Not authenticated and not on login page -> redirect
-      router.replace('/login');
-      // Keep isChecking true until redirect happens to prevent content flash
-    };
+    if (isAuthenticated) {
+      setIsChecking(false);
+      return;
+    }
 
-    checkAuth();
-  }, [isAuthenticated, pathname, router, dispatch]);
+    // Not authenticated, not on login page -> redirect
+    router.replace('/login');
+  }, [isAuthenticated, pathname, router]);
 
-  // Show loading spinner while checking auth to prevent content flash
-  if (isChecking) {
+  if (isChecking && pathname !== '/login') {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center gap-4">

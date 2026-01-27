@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch } from '@/lib/store/hooks';
 import { login, setAuthError } from '@/lib/store/authSlice';
@@ -10,14 +10,17 @@ import { Button } from '@/components/ui/button';
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [username, setUsername] = useState('opencode');
-  const [password, setPassword] = useState('');
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.SyntheticEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const username = usernameRef.current?.value || '';
+    const password = passwordRef.current?.value || '';
 
     if (!password) {
       setError('Password is required');
@@ -27,9 +30,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Temporarily store credentials in session storage for the client to use them
-      // This is a bit of a hack since client.ts reads from sessionStorage directly
-      // In a real app we might pass credentials directly to health() or configure the client
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('opencode_auth', JSON.stringify({
           username,
@@ -37,14 +37,12 @@ export default function LoginPage() {
         }));
       }
 
-      // Validate credentials by calling health check
       const isHealthy = await openCodeClient.health();
 
       if (isHealthy) {
         dispatch(login({ username, password }));
         router.push('/');
       } else {
-        // If health check failed, clear the temp credentials
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('opencode_auth');
         }
@@ -82,12 +80,13 @@ export default function LoginPage() {
                 Username
               </label>
               <input
+                ref={usernameRef}
                 id="username"
                 name="username"
                 type="text"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                defaultValue="admin"
+                autoComplete="username"
                 className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
               />
             </div>
@@ -100,12 +99,12 @@ export default function LoginPage() {
                 Password
               </label>
               <input
+                ref={passwordRef}
                 id="password"
                 name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
               />
             </div>
