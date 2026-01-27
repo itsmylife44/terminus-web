@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.1.3';
+export const APP_VERSION = '1.1.10';
 export const GITHUB_REPO = 'itsmylife44/terminus-web';
 
 export interface GitHubRelease {
