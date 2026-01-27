@@ -1,4 +1,4 @@
 
 > @terminus-web/web@0.1.0 lint
-> eslint src --ext .ts,.tsx
+> eslint pages --ext .ts,.tsx
 
