@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Terminal } from 'ghostty-web';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { getPtyBaseUrl } from '@/lib/utils';
 import {
   setConnectionStatus,
   setError,
@@ -36,7 +37,7 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
 
     dispatch(setConnectionStatus('connecting'));
 
-    const baseUrl = process.env.NEXT_PUBLIC_OPENCODE_URL || 'http://localhost:3001';
+    const baseUrl = getPtyBaseUrl();
 
     try {
       const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
@@ -135,7 +136,7 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
   useEffect(() => {
     if (!terminal) return;
 
-    const baseUrl = process.env.NEXT_PUBLIC_OPENCODE_URL || 'http://localhost:3001';
+    const baseUrl = getPtyBaseUrl();
 
     const disposable = terminal.onResize(({ cols, rows }) => {
       if (ptyIdRef.current) {
