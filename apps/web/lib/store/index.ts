@@ -3,6 +3,7 @@ import terminalReducer from './terminalSlice';
 import authReducer from './authSlice';
 import sessionsReducer from './sessionsSlice';
 import tabsReducer from './tabsSlice';
+import configReducer from './configSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     auth: authReducer,
     sessions: sessionsReducer,
     tabs: tabsReducer,
+    config: configReducer,
   },
 });
 
