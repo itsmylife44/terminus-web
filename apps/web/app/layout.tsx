@@ -1,22 +1,22 @@
 'use client';
 
-import "./globals.css";
-import { ReduxProvider } from "@/lib/store/provider";
-import AuthGate from "@/components/layout/AuthGate";
-import { Sidebar } from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import './globals.css';
+import { ReduxProvider } from '@/lib/store/provider';
+import AuthGate from '@/components/layout/AuthGate';
+import { Sidebar } from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  const showLayout = pathname !== '/login';
+
+  // Pages that handle their own layout
+  const noLayoutPages = ['/login', '/terminal'];
+  const showLayout = !noLayoutPages.some(
+    (page) => pathname === page || pathname.startsWith(page + '/')
+  );
 
   return (
     <html lang="en" className="dark">
@@ -28,13 +28,11 @@ export default function RootLayout({
                 <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
                 <div className="flex flex-col min-h-screen md:ml-64 transition-all duration-300">
                   <Header onMenuClick={() => setIsSidebarOpen(true)} />
-                  <main className="flex-1 p-4 md:p-6 bg-gray-950 overflow-y-auto">
-                    {children}
-                  </main>
+                  <main className="flex-1 p-4 md:p-6 bg-gray-950 overflow-y-auto">{children}</main>
                 </div>
               </>
             ) : (
-              <main>{children}</main>
+              <main className="min-h-screen">{children}</main>
             )}
           </AuthGate>
         </ReduxProvider>

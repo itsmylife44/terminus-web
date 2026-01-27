@@ -20,26 +20,23 @@ export default function TerminalPage() {
   }, [tabs.length, dispatch]);
 
   return (
-    <main className="flex h-screen w-screen flex-col bg-[#1a1a1a] overflow-hidden">
+    <main className="flex h-full w-full flex-col bg-[#1a1a1a] overflow-hidden">
       <TerminalHeader />
       <TerminalTabs />
       <div className="flex-1 overflow-hidden relative">
         <TerminalContainer>
           {tabs.map((tab) => (
-            <div 
-              key={tab.id} 
+            <div
+              key={tab.id}
               className="w-full h-full"
               style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
             >
-              <TerminalClient 
-                ptyId={tab.ptyId} 
-                isActive={tab.id === activeTabId}
-              />
+              <TerminalClient ptyId={tab.ptyId} isActive={tab.id === activeTabId} />
             </div>
           ))}
         </TerminalContainer>
       </div>
-      <div className="px-4 py-1 bg-gray-900 border-t border-gray-700 text-xs text-gray-500 text-center shrink-0">
+      <div className="px-2 py-1 bg-gray-900 border-t border-gray-700 text-xs text-gray-500 text-center shrink-0">
         Ctrl+Shift+C to copy, Ctrl+Shift+V to paste
       </div>
     </main>
