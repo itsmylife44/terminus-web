@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Terminal } from 'ghostty-web';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { getPtyBaseUrl } from '@/lib/utils';
+import { getPtyBaseUrl, getBasicAuthHeader, getAuthenticatedWsUrl } from '@/lib/utils';
 import {
   setConnectionStatus,
   setError,
@@ -42,9 +42,13 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
     try {
       const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
 
+      const authHeader = getBasicAuthHeader();
       const response = await fetch(`${baseUrl}/pty`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader && { Authorization: authHeader }),
+        },
         body: JSON.stringify({
           cols: terminal.cols,
           rows: terminal.rows,
@@ -62,17 +66,22 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
       const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
       const wsHost = baseUrl.replace(/^https?:\/\//, '');
       const wsUrl = `${wsProtocol}://${wsHost}/pty/${ptySession.id}/connect`;
+      const authenticatedWsUrl = getAuthenticatedWsUrl(wsUrl);
 
-      const socket = new WebSocket(wsUrl);
+      const socket = new WebSocket(authenticatedWsUrl);
       socketRef.current = socket;
 
       socket.onopen = async () => {
         dispatch(setConnectionStatus('connected'));
         dispatch(resetReconnectAttempts());
 
+        const authHeader = getBasicAuthHeader();
         await fetch(`${baseUrl}/pty/${ptySession.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader && { Authorization: authHeader }),
+          },
           body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
         }).catch(() => {});
 
@@ -140,9 +149,13 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
 
     const disposable = terminal.onResize(({ cols, rows }) => {
       if (ptyIdRef.current) {
+        const authHeader = getBasicAuthHeader();
         fetch(`${baseUrl}/pty/${ptyIdRef.current}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader && { Authorization: authHeader }),
+          },
           body: JSON.stringify({ size: { cols, rows } }),
         }).catch(console.error);
       }
