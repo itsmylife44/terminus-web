@@ -1,0 +1,27 @@
+
+> @terminus-web/web@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.10
+
+   Linting and checking validity of types ...
+
+ ⚠ The Next.js plugin was not detected in your ESLint configuration. See https://nextjs.org/docs/app/api-reference/config/eslint#migrating-existing-config
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 930ms
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (pages)                                Size  First Load JS
+┌ ○ /                                       297 B        97.8 kB
+└ ○ /404                                    180 B        97.6 kB
++ First Load JS shared by all             97.5 kB
+  ├ chunks/framework-7b665f4436b88fde.js  59.6 kB
+  ├ chunks/main-4144bea61b6a1a52.js       36.9 kB
+  └ other shared chunks (total)             946 B
+
+○  (Static)  prerendered as static content
+
