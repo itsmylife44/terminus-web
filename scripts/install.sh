@@ -21,7 +21,7 @@ NC='\033[0m'
 
 INSTALL_DIR="/opt/terminus-web"
 TERMINUS_USER="terminus"
-REPO_URL="https://github.com/OpenCodeLab/terminus-web.git"
+REPO_URL="https://github.com/itsmylife44/terminus-web.git"
 
 # User input variables
 DOMAIN=""
