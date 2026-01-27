@@ -266,7 +266,7 @@ install_opencode() {
     log_step "Downloading OpenCode..."
     
     # Use the official install script
-    curl -fsSL https://opencode.ai/install.sh | bash -s -- --install-dir "$OPENCODE_DIR"
+    curl -fsSL https://opencode.ai/install | bash
     
     # If installed to a different location, create symlink
     if [[ -f "/root/.opencode/bin/opencode" && ! -f "$OPENCODE_PATH" ]]; then
@@ -274,7 +274,7 @@ install_opencode() {
     fi
     
     # Also install for terminus user
-    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install.sh | bash" || true
+    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install | bash" || true
     
     # Verify installation
     if [[ -f "$OPENCODE_PATH" ]]; then

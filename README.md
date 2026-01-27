@@ -16,7 +16,7 @@ Browser (ghostty-web) → Caddy → Next.js (port 3000)
 ## Quick Install (Ubuntu 24.04/22.04)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.0/scripts/install.sh -o install.sh && sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.1/scripts/install.sh -o install.sh && sudo bash install.sh
 ```
 
 The installer will:
@@ -43,7 +43,7 @@ The installer will:
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.0/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.1/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
 ```
 
 ---
@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.0/scr
 ### Prerequisites
 
 - Node.js 20+
-- OpenCode installed (`curl -fsSL https://opencode.ai/install.sh | bash`)
+- OpenCode installed (`curl -fsSL https://opencode.ai/install | bash`)
 
 ### Quick Start
 
@@ -118,7 +118,7 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
 1. **Install OpenCode**:
 
    ```bash
-   curl -fsSL https://opencode.ai/install.sh | bash
+   curl -fsSL https://opencode.ai/install | bash
    ```
 
 2. **Build the project**:
