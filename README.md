@@ -1,5 +1,40 @@
 # Terminus-Web
 
+## Quick Install (Ubuntu 24.04)
+
+**One-liner installation:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/install.sh | sudo bash
+```
+
+This automated installer will:
+- Install Node.js 20, PM2, and Caddy
+- Create a `terminus` system user
+- Clone and build the application
+- Configure automatic HTTPS with Let's Encrypt (for domains)
+- Set up firewall rules (UFW)
+- Start services with PM2
+
+### Requirements
+- Ubuntu 24.04 LTS or 22.04 LTS
+- Root access (sudo)
+- A domain pointing to your server (recommended for HTTPS)
+- OpenCode binary (or install it during setup)
+
+### What You'll Be Asked
+- Domain name or IP address
+- Path to OpenCode binary (default: `/usr/local/bin/opencode`)
+- Email for SSL certificate (optional, for Let's Encrypt notifications)
+
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/uninstall.sh | sudo bash
+```
+
+---
+
 Terminus-Web is a web-based terminal emulator that runs the OpenCode CLI/TUI in your browser with full interactivity. It provides a real PTY (Pseudo-Terminal) environment, allowing you to interact with OpenCode as if you were using a native terminal.
 
 ## Prerequisites
@@ -39,7 +74,13 @@ The following environment variables can be configured:
 
 ## Production Deployment
 
-For production, it is recommended to use **PM2** to manage the processes.
+### Automated Install (Recommended)
+
+Use the one-liner installer for Ubuntu 24.04/22.04 (see [Quick Install](#quick-install-ubuntu-2404) above).
+
+### Manual Install with PM2
+
+If you prefer manual installation or need a different OS:
 
 1. **Build the project**:
    ```bash
