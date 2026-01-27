@@ -13,6 +13,7 @@ import {
 import { APP_VERSION } from '@/lib/version/versionChecker';
 import { Switch } from '@/components/ui/switch';
 import { UpdateConfirmDialog } from '@/components/layout/UpdateConfirmDialog';
+import { useAutoUpdate } from '@/hooks/useAutoUpdate';
 
 const STAGE_LABELS = {
   preparing: 'Preparing update...',
@@ -52,6 +53,9 @@ export function UpdateNotification() {
 
   // Version check (existing)
   const { updateAvailable, latestVersion, releaseUrl, isLoading } = useVersionCheck();
+
+  // Auto-update hook
+  const { triggerUpdate } = useAutoUpdate();
 
   // Sync version check with Redux
   useEffect(() => {
@@ -146,9 +150,8 @@ export function UpdateNotification() {
   };
 
   const handleConfirmUpdate = () => {
-    // This will be handled by useAutoUpdate hook
-    // For now, just close the dialog
     dispatch(hideConfirmDialog());
+    triggerUpdate();
   };
 
   const handleCancelUpdate = () => {
