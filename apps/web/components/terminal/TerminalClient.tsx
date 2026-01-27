@@ -5,11 +5,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { ClipboardAddon } from '@xterm/addon-clipboard';
 import '@xterm/xterm/css/xterm.css';
+import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 
 export function TerminalClient() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
+  const { connect } = useTerminalConnection(terminalInstance.current);
 
   useEffect(() => {
     if (!terminalRef.current || terminalInstance.current) return;
@@ -35,7 +37,6 @@ export function TerminalClient() {
 
     terminalInstance.current = terminal;
 
-    // Debounced resize
     let resizeTimeout: NodeJS.Timeout;
     const observer = new ResizeObserver(() => {
       clearTimeout(resizeTimeout);
@@ -50,6 +51,12 @@ export function TerminalClient() {
       terminal.dispose();
     };
   }, []);
+
+  useEffect(() => {
+    if (terminalInstance.current) {
+      connect();
+    }
+  }, [connect]);
 
   return <div ref={terminalRef} className="w-full h-full" />;
 }
