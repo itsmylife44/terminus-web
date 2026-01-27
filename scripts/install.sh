@@ -360,6 +360,9 @@ configure_environment() {
 NEXT_PUBLIC_OPENCODE_URL=${PROTOCOL}://${DOMAIN}
 NEXT_PUBLIC_OPENCODE_COMMAND=$OPENCODE_PATH
 NODE_ENV=production
+TERMINUS_WEB_PORT=${TERMINUS_WEB_PORT:-3000}
+OPENCODE_SERVE_PORT=${OPENCODE_SERVE_PORT:-3001}
+OPENCODE_INTERNAL_URL=http://localhost:${OPENCODE_SERVE_PORT:-3001}
 EOF
     
     chown $TERMINUS_USER:$TERMINUS_USER "$WEB_ENV"
@@ -381,7 +384,7 @@ module.exports = {
       script: 'npm',
       args: 'start',
       env: {
-        PORT: 3000,
+        PORT: ${TERMINUS_WEB_PORT:-3000},
         NODE_ENV: 'production'
       },
       instances: 1,
@@ -396,7 +399,7 @@ module.exports = {
       name: 'opencode-serve',
       cwd: '/home/$TERMINUS_USER',
       script: '$OPENCODE_PATH',
-      args: 'serve --port 3001 --hostname 0.0.0.0',
+      args: 'serve --port ${OPENCODE_SERVE_PORT:-3001} --hostname 0.0.0.0',
        env: {
          NODE_ENV: 'production',
          OPENCODE_SERVER_PASSWORD: '$OPENCODE_PASSWORD',
@@ -445,14 +448,14 @@ EOF
 EOF
     fi
     
-    cat >> "$CADDY_CONFIG" << 'EOF'
+    cat >> "$CADDY_CONFIG" << EOF
 
     handle /pty/* {
-        reverse_proxy localhost:3001
+        reverse_proxy localhost:${OPENCODE_SERVE_PORT:-3001}
     }
 
     handle {
-        reverse_proxy localhost:3000
+        reverse_proxy localhost:${TERMINUS_WEB_PORT:-3000}
     }
 
     log {
