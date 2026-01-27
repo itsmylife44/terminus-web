@@ -355,7 +355,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 4. WebSocket PTY Server - Lifecycle Management
+- [x] 4. WebSocket PTY Server - Lifecycle Management
 
   **What to do**:
   - Add 30-second heartbeat timer with ping/pong
@@ -442,7 +442,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 5. Create Next.js Frontend Skeleton
+- [x] 5. Create Next.js Frontend Skeleton
 
   **What to do**:
   - Initialize Next.js 15+ with App Router in `apps/web/`

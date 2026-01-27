@@ -3,11 +3,8 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "react",
-    "baseUrl": "../../",
+    "baseUrl": ".",
     "paths": {
-      "@terminus-web/shared": [
-        "packages/shared/dist"
-      ],
       "@/*": [
         "./*"
       ]
@@ -25,6 +22,9 @@
   },
   "include": [
     "src/**/*",
+    "app/**/*",
+    "lib/**/*",
+    "components/**/*",
     ".next/types/**/*.ts"
   ]
 }
