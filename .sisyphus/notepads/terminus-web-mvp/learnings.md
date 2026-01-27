@@ -37,3 +37,13 @@
   - Used `setTimeout` for backoff delays
   - Stops auto-retry after 5 attempts
 - Integrated overlays into `TerminalClient` with z-index positioning over the terminal canvas
+
+## Task 10: UI Polish and Connection Status
+- Added `ConnectionStatus` component with colored indicators for real-time feedback (green=connected, yellow=connecting, red=disconnected).
+- Created `TerminalHeader` to house the title and status indicator, establishing a clear app structure.
+- Implemented full-height flex layout: Header (fixed) -> Terminal (flex-1) -> Footer Hints (fixed).
+- Migrated all overlay buttons to shadcn/ui `Button` component for consistent styling.
+- Added visual loading spinner (CSS animation) for 'connecting' state.
+- Learnings: 
+  - `shrink-0` is vital for headers/footers in flex-col layouts to prevent squishing by xterm canvas.
+  - `w-screen h-screen` on the root container is more reliable than `100vh` for full-screen web apps to avoid scrollbar jitter.

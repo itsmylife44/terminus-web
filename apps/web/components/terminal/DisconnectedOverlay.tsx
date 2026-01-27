@@ -7,6 +7,8 @@ interface DisconnectedOverlayProps {
   onReconnect: () => void;
 }
 
+import { Button } from '@/components/ui/button';
+
 export function DisconnectedOverlay({ onReconnect }: DisconnectedOverlayProps) {
   const { connectionStatus, reconnectAttempts } = useAppSelector((state) => state.terminal);
   const [countdown, setCountdown] = useState(0);
@@ -39,16 +41,16 @@ export function DisconnectedOverlay({ onReconnect }: DisconnectedOverlayProps) {
       <div className="text-center space-y-4">
         <h2 className="text-xl font-semibold text-red-400">Connection Lost</h2>
         
-        {isGivenUp ? (
+          {isGivenUp ? (
           <div className="space-y-4">
             <p className="text-gray-300">Maximum reconnection attempts reached.</p>
-            <button
-              type="button"
+            <Button
               onClick={onReconnect}
-              className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200 transition-colors font-medium"
+              variant="secondary"
+              className="font-medium"
             >
               Try Again
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="space-y-2">
@@ -56,13 +58,14 @@ export function DisconnectedOverlay({ onReconnect }: DisconnectedOverlayProps) {
               Reconnecting in <span className="font-mono font-bold text-white">{countdown}s</span>...
             </p>
             <p className="text-sm text-gray-500">Attempt {reconnectAttempts}/5</p>
-            <button
-              type="button"
+            <Button
               onClick={onReconnect}
-              className="mt-2 px-3 py-1 bg-gray-700 text-sm text-gray-200 rounded hover:bg-gray-600 transition-colors"
+              variant="secondary"
+              size="sm"
+              className="mt-2"
             >
               Reconnect Now
-            </button>
+            </Button>
           </div>
         )}
       </div>

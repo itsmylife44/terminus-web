@@ -6,6 +6,8 @@ interface SessionEndedOverlayProps {
   onNewSession: () => void;
 }
 
+import { Button } from '@/components/ui/button';
+
 export function SessionEndedOverlay({ onNewSession }: SessionEndedOverlayProps) {
   const { connectionStatus, exitCode } = useAppSelector((state) => state.terminal);
 
@@ -22,13 +24,14 @@ export function SessionEndedOverlay({ onNewSession }: SessionEndedOverlayProps) 
           Exit code: <span className={exitCode === 0 ? 'text-green-400' : 'text-red-400'}>{exitCode}</span>
         </div>
 
-        <button
-          type="button"
+        <Button
           onClick={onNewSession}
-          className="px-6 py-3 bg-white text-black rounded-md hover:bg-gray-200 transition-colors font-medium text-lg"
+          variant="secondary"
+          size="lg"
+          className="font-medium text-lg"
         >
           Start New Session
-        </button>
+        </Button>
       </div>
     </div>
   );

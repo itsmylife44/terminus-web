@@ -803,7 +803,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 9. Reconnection Logic and UI Overlay
+- [x] 9. Reconnection Logic and UI Overlay
 
   **What to do**:
   - Add reconnection with exponential backoff (1s, 2s, 4s, 8s, 16s max)
@@ -906,7 +906,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 10. UI Polish and Connection Status Indicator
+- [x] 10. UI Polish and Connection Status Indicator
 
   **What to do**:
   - Add connection status indicator (colored dot + text)

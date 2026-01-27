@@ -6,7 +6,7 @@ interface TerminalContainerProps {
 
 export function TerminalContainer({ children }: TerminalContainerProps) {
   return (
-    <div className="w-full h-full bg-[#1a1a1a] p-4 overflow-hidden">
+    <div className="w-full h-full bg-[#1a1a1a] p-0 overflow-hidden relative">
       {children}
     </div>
   );
