@@ -249,50 +249,37 @@ install_caddy() {
 }
 
 install_opencode() {
-    log_step "Installing OpenCode..."
+    log_step "Installing OpenCode for $TERMINUS_USER user..."
     
-    # Check if OpenCode already exists at the specified path
-    if [[ -f "$OPENCODE_PATH" ]]; then
-        local VERSION=$("$OPENCODE_PATH" version 2>/dev/null || echo "unknown")
-        log_success "OpenCode already installed at $OPENCODE_PATH (version: $VERSION)"
+    local TERMINUS_OPENCODE="/home/$TERMINUS_USER/.opencode/bin/opencode"
+    
+    # Check if OpenCode already exists and is accessible by terminus user
+    if [[ -f "$TERMINUS_OPENCODE" ]]; then
+        local VERSION=$(su - "$TERMINUS_USER" -c "$TERMINUS_OPENCODE version" 2>/dev/null || echo "unknown")
+        log_success "OpenCode already installed at $TERMINUS_OPENCODE (version: $VERSION)"
+        
+        # Ensure symlink exists
+        if [[ ! -f "$OPENCODE_PATH" ]] || [[ "$(readlink -f "$OPENCODE_PATH")" != "$TERMINUS_OPENCODE" ]]; then
+            ln -sf "$TERMINUS_OPENCODE" "$OPENCODE_PATH"
+            log_success "Symlink created: $OPENCODE_PATH -> $TERMINUS_OPENCODE"
+        fi
         return
     fi
     
-    # Create install directory
-    local OPENCODE_DIR=$(dirname "$OPENCODE_PATH")
-    mkdir -p "$OPENCODE_DIR"
-    
-    # Download and install OpenCode using the official installer
-    log_step "Downloading OpenCode..."
-    
-    # Use the official install script
-    curl -fsSL https://opencode.ai/install | bash
-    
-    # If installed to a different location, create symlink
-    if [[ -f "/root/.opencode/bin/opencode" && ! -f "$OPENCODE_PATH" ]]; then
-        ln -sf /root/.opencode/bin/opencode "$OPENCODE_PATH"
-    fi
-    
-    # Also install for terminus user
-    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install | bash" || true
+    # Install OpenCode as terminus user (NOT as root)
+    log_step "Downloading OpenCode as $TERMINUS_USER..."
+    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install | bash"
     
     # Verify installation
-    if [[ -f "$OPENCODE_PATH" ]]; then
-        local VERSION=$("$OPENCODE_PATH" version 2>/dev/null || echo "installed")
-        log_success "OpenCode installed at $OPENCODE_PATH (version: $VERSION)"
+    if [[ -f "$TERMINUS_OPENCODE" ]]; then
+        # Create symlink to /usr/local/bin for convenience
+        ln -sf "$TERMINUS_OPENCODE" "$OPENCODE_PATH"
+        
+        local VERSION=$(su - "$TERMINUS_USER" -c "$TERMINUS_OPENCODE version" 2>/dev/null || echo "installed")
+        log_success "OpenCode installed at $TERMINUS_OPENCODE (version: $VERSION)"
+        log_success "Symlink created: $OPENCODE_PATH -> $TERMINUS_OPENCODE"
     else
-        log_warning "OpenCode installed but not at expected path. Checking common locations..."
-        
-        # Check common installation paths
-        for path in "/home/$TERMINUS_USER/.opencode/bin/opencode" "/usr/local/bin/opencode" "/root/.opencode/bin/opencode"; do
-            if [[ -f "$path" ]]; then
-                OPENCODE_PATH="$path"
-                log_success "Found OpenCode at: $OPENCODE_PATH"
-                return
-            fi
-        done
-        
-        log_error "OpenCode installation failed. Please install manually."
+        log_error "OpenCode installation failed. Please install manually as $TERMINUS_USER user."
         exit 1
     fi
 }
@@ -638,8 +625,8 @@ main() {
     log_step "Starting installation..."
     echo
     
-    install_dependencies
     create_system_user
+    install_dependencies
     clone_repository
     build_application
     configure_environment
