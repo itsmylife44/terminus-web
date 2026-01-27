@@ -16,7 +16,7 @@ Browser (ghostty-web) → Caddy → Next.js (port 3000)
 ## Quick Install (Ubuntu 24.04/22.04)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.5/scripts/install.sh -o install.sh && sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.6/scripts/install.sh -o install.sh && sudo bash install.sh
 ```
 
 The installer will:
@@ -43,7 +43,7 @@ The installer will:
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.5/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.6/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
 ```
 
 ---
