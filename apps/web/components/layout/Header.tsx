@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { logout } from '@/lib/store/authSlice';
 import { ConnectionStatus } from '@/components/terminal/ConnectionStatus';
+import { UpdateNotification } from './UpdateNotification';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -30,8 +31,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
             className="md:hidden p-1 text-gray-400 hover:text-white transition-colors"
           >
             <span className="sr-only">Open menu</span>
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           </button>
         )}
@@ -40,11 +52,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right: Status + User + Logout */}
       <div className="flex items-center gap-4">
+        <UpdateNotification />
         <ConnectionStatus />
         {username && (
-           <span className="text-sm text-gray-400 hidden sm:inline-block">{username}</span>
+          <span className="text-sm text-gray-400 hidden sm:inline-block">{username}</span>
         )}
-        <button 
+        <button
           type="button"
           onClick={handleLogout}
           className="text-sm text-gray-400 hover:text-white transition-colors"
