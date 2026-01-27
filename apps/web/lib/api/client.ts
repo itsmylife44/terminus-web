@@ -10,10 +10,36 @@ export interface OpenCodeConfig {
   [key: string]: unknown;
 }
 
+export interface OpenCodeMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  [key: string]: unknown;
+}
+
+export interface OpenCodeTodo {
+  id: string;
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high';
+  [key: string]: unknown;
+}
+
 export interface OpenCodeSession {
   id: string;
+  status?: string;
+  state?: string;
+  created?: string;
+  agent?: string;
+  messageCount?: number;
   // Add other session properties as needed
   [key: string]: unknown;
+}
+
+export interface OpenCodeSessionDetail extends OpenCodeSession {
+  messages?: OpenCodeMessage[];
+  todos?: OpenCodeTodo[];
 }
 
 export interface OpenCodeProvider {
@@ -139,6 +165,28 @@ export class OpenCodeAPIClient {
       headers: this.getHeaders(),
     });
     return this.handleResponse<OpenCodeProvider[]>(response);
+  }
+
+  /**
+   * Get session by ID
+   * @param sessionId Session ID to fetch
+   */
+  public async getSession(sessionId: string): Promise<OpenCodeSessionDetail> {
+    const response = await fetch(`${this.baseUrl}/session/${sessionId}`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<OpenCodeSessionDetail>(response);
+  }
+
+  /**
+   * Get todos for a session
+   * @param sessionId Session ID to fetch todos for
+   */
+  public async getSessionTodos(sessionId: string): Promise<OpenCodeTodo[]> {
+    const response = await fetch(`${this.baseUrl}/session/${sessionId}/todo`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<OpenCodeTodo[]>(response);
   }
 }
 
