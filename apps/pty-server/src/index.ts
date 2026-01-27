@@ -3,6 +3,8 @@ import { spawnPty } from './pty.js';
 import type { ClientSession, WebSocketMessage } from './types.js';
 
 const WS_PORT = Number(process.env.WS_PORT || 3001);
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const GRACE_PERIOD_TIMEOUT = 5000; // 5 seconds
 const clients = new Map<string, ClientSession>();
 
 const wss = new WebSocketServer({ port: WS_PORT });
@@ -20,18 +22,37 @@ function validateResizeDimensions(cols: unknown, rows: unknown): { cols: number;
 }
 
 wss.on('connection', (ws) => {
-  const clientId = Math.random().toString(36).substring(2, 11);
-  console.log('Client connected:', clientId);
+   const clientId = Math.random().toString(36).substring(2, 11);
+   console.log('Client connected:', clientId);
 
-  try {
-    const pty = spawnPty();
+   let isAlive = true;
+   let gracePeriodTimer: NodeJS.Timeout | null = null;
 
-    const session: ClientSession = {
-      id: clientId,
-      pty,
-      createdAt: new Date(),
-    };
-    clients.set(clientId, session);
+   try {
+     const pty = spawnPty();
+
+     const session: ClientSession = {
+       id: clientId,
+       pty,
+       createdAt: new Date(),
+     };
+     clients.set(clientId, session);
+
+     // Setup heartbeat ping/pong to detect dead connections
+     const heartbeat = setInterval(() => {
+       if (!isAlive) {
+         console.log('Client did not respond to heartbeat, terminating:', clientId);
+         ws.terminate();
+         return;
+       }
+       isAlive = false;
+       ws.ping();
+     }, HEARTBEAT_INTERVAL);
+
+     // Reset isAlive flag when pong received
+     ws.on('pong', () => {
+       isAlive = true;
+     });
 
     // Handle PTY output: send to WebSocket with backpressure support
     pty.onData((data) => {
@@ -48,16 +69,21 @@ wss.on('connection', (ws) => {
       }
     });
 
-    // Handle PTY exit: send exit message with exit code
-    pty.onExit(({ exitCode }) => {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'exit',
-          code: exitCode,
-        } as WebSocketMessage));
-      }
-      ws.close();
-    });
+      // Handle PTY exit: send exit message with exit code
+      pty.onExit(({ exitCode }) => {
+        if (ws.readyState === ws.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'exit',
+            code: exitCode,
+          } as WebSocketMessage));
+        }
+        clearInterval(heartbeat);
+        if (gracePeriodTimer) {
+          clearTimeout(gracePeriodTimer);
+          gracePeriodTimer = null;
+        }
+        ws.close();
+      });
 
     // Handle incoming WebSocket messages
     ws.on('message', (message) => {
@@ -114,13 +140,27 @@ wss.on('connection', (ws) => {
       }
     });
 
-    ws.on('close', () => {
-      console.log('Client disconnected:', clientId);
-      if (session.pty) {
-        session.pty.kill();
-      }
-      clients.delete(clientId);
-    });
+     ws.on('close', () => {
+       console.log('Client disconnected:', clientId);
+       clearInterval(heartbeat);
+       
+       // Start grace period timer to allow PTY to shutdown gracefully
+       gracePeriodTimer = setTimeout(() => {
+         try {
+           if (session.pty) {
+             session.pty.kill();
+             console.log('PTY killed after grace period:', clientId);
+           }
+         } catch (err) {
+           // ESRCH means process already exited - ignore it
+           if ((err as NodeJS.ErrnoException).code !== 'ESRCH') {
+             throw err;
+           }
+         }
+       }, GRACE_PERIOD_TIMEOUT);
+     });
+
+
 
     ws.on('error', (err) => {
       console.error('WebSocket error:', err);
@@ -129,6 +169,29 @@ wss.on('connection', (ws) => {
     console.error('Error spawning PTY:', err);
     ws.close();
   }
+});
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server gracefully...');
+  wss.clients.forEach((ws) => {
+    ws.close();
+  });
+  wss.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, closing server gracefully...');
+  wss.clients.forEach((ws) => {
+    ws.close();
+  });
+  wss.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 console.log(`PTY Server listening on ws://localhost:${WS_PORT}`);

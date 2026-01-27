@@ -37,7 +37,7 @@ function createSafeEnvironment(): Record<string, string> {
  * @returns IPty instance
  */
 export function spawnPty(options: PtySpawnOptions = {}): IPty {
-  const shell = options.shell || process.env.SHELL || '/bin/bash';
+  const shell = process.env.OPENCODE_PATH || options.shell || process.env.SHELL || '/bin/bash';
   const safeEnv = createSafeEnvironment();
 
   const pty = spawn(shell, [], {
