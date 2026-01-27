@@ -2,6 +2,15 @@
 
 set -euo pipefail
 
+if [[ -t 0 ]]; then
+    :
+elif [[ -e /dev/tty ]]; then
+    exec < /dev/tty
+else
+    echo "Error: No TTY available. Run this script in an interactive terminal." >&2
+    exit 1
+fi
+
 # ANSI color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
