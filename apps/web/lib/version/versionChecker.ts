@@ -1,4 +1,7 @@
-export const APP_VERSION = '1.1.10';
+// Read version from package.json - no more hardcoding!
+import packageJson from '../../package.json';
+
+export const APP_VERSION = packageJson.version;
 export const GITHUB_REPO = 'itsmylife44/terminus-web';
 
 export interface GitHubRelease {
