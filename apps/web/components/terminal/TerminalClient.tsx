@@ -13,17 +13,18 @@ import {
 } from '@/lib/store/terminalSlice';
 
 interface TerminalClientProps {
-  ptyId?: string;
+  tabId: string; // Tab ID (also used as DB session ID)
+  existingPtyId?: string; // PTY ID if reconnecting to existing session
   isActive?: boolean;
 }
 
-export function TerminalClient({ ptyId, isActive = true }: TerminalClientProps) {
+export function TerminalClient({ tabId, existingPtyId, isActive = true }: TerminalClientProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddonRef = useRef<FitAddonType | null>(null);
   const terminalInstanceRef = useRef<TerminalType | null>(null);
   const [terminal, setTerminal] = useState<TerminalType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { connect } = useTerminalConnection(terminal, ptyId);
+  const { connect } = useTerminalConnection(terminal, { tabId, existingPtyId });
   const dispatch = useAppDispatch();
 
   useEffect(() => {

@@ -11,18 +11,35 @@ import {
   resetReconnectAttempts,
   incrementReconnectAttempts,
 } from '@/lib/store/terminalSlice';
+import { updateTabPtyId, setTabConnected } from '@/lib/store/tabsSlice';
+import {
+  createPtySession,
+  updatePtySession,
+  disconnectSession,
+} from '@/lib/store/ptySessionsSlice';
 
-export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: string) {
+interface UseTerminalConnectionOptions {
+  tabId: string; // Tab ID (also used as DB session ID)
+  existingPtyId?: string; // If reconnecting to existing PTY
+}
+
+export function useTerminalConnection(
+  terminal: Terminal | null,
+  options: UseTerminalConnectionOptions
+) {
+  const { tabId, existingPtyId } = options;
   const dispatch = useAppDispatch();
   const { reconnectAttempts, connectionStatus } = useAppSelector((state) => state.terminal);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManuallyClosedRef = useRef(false);
-  const ptyIdRef = useRef<string | null>(initialPtyId || null);
+  const ptyIdRef = useRef<string | null>(existingPtyId || null);
+  const isReconnectRef = useRef(!!existingPtyId);
 
   const connect = useCallback(async () => {
     if (!terminal) return;
 
+    // Close existing connection
     if (socketRef.current) {
       isManuallyClosedRef.current = true;
       socketRef.current.close();
@@ -38,34 +55,57 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
     dispatch(setConnectionStatus('connecting'));
 
     const baseUrl = getPtyBaseUrl();
+    const authHeader = getBasicAuthHeader();
 
     try {
-      const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
+      let ptyId = ptyIdRef.current;
 
-      const authHeader = getBasicAuthHeader();
-      const response = await fetch(`${baseUrl}/pty`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authHeader && { Authorization: authHeader }),
-        },
-        body: JSON.stringify({
-          cols: terminal.cols,
-          rows: terminal.rows,
-          ...(opencodeCommand && { command: opencodeCommand }),
-        }),
-      });
+      // If we have an existing PTY ID, try to reconnect
+      // Otherwise, create a new PTY session
+      if (!ptyId || !isReconnectRef.current) {
+        const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
 
-      if (!response.ok) {
-        throw new Error(`Failed to create PTY: ${response.status}`);
+        const response = await fetch(`${baseUrl}/pty`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader && { Authorization: authHeader }),
+          },
+          body: JSON.stringify({
+            cols: terminal.cols,
+            rows: terminal.rows,
+            ...(opencodeCommand && { command: opencodeCommand }),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create PTY: ${response.status}`);
+        }
+
+        const ptySession = await response.json();
+        ptyId = ptySession.id;
+        ptyIdRef.current = ptyId;
+        isReconnectRef.current = false;
+
+        // Update tab with the real PTY ID
+        dispatch(updateTabPtyId({ id: tabId, ptyId: ptyId! }));
+
+        // Save session to database
+        dispatch(
+          createPtySession({
+            id: tabId,
+            pty_id: ptyId!,
+            title: `Terminal`,
+            cols: terminal.cols,
+            rows: terminal.rows,
+          })
+        );
       }
 
-      const ptySession = await response.json();
-      ptyIdRef.current = ptySession.id;
-
+      // Connect WebSocket
       const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
       const wsHost = baseUrl.replace(/^https?:\/\//, '');
-      const wsUrl = `${wsProtocol}://${wsHost}/pty/${ptySession.id}/connect`;
+      const wsUrl = `${wsProtocol}://${wsHost}/pty/${ptyId}/connect`;
       const authenticatedWsUrl = getAuthenticatedWsUrl(wsUrl);
 
       const socket = new WebSocket(authenticatedWsUrl);
@@ -74,9 +114,18 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
       socket.onopen = async () => {
         dispatch(setConnectionStatus('connected'));
         dispatch(resetReconnectAttempts());
+        dispatch(setTabConnected({ id: tabId, isConnected: true }));
 
-        const authHeader = getBasicAuthHeader();
-        await fetch(`${baseUrl}/pty/${ptySession.id}`, {
+        // Update session status in database
+        dispatch(
+          updatePtySession({
+            id: tabId,
+            input: { status: 'active' },
+          })
+        );
+
+        // Send initial resize
+        await fetch(`${baseUrl}/pty/${ptyId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -97,8 +146,12 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
       };
 
       socket.onclose = (event) => {
+        dispatch(setTabConnected({ id: tabId, isConnected: false }));
+
         if (isManuallyClosedRef.current) {
           dispatch(setConnectionStatus('disconnected'));
+          // Mark session as disconnected in DB
+          dispatch(disconnectSession(tabId));
           return;
         }
 
@@ -106,9 +159,18 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
           dispatch(setExitCode(0));
           dispatch(setConnectionStatus('disconnected'));
           terminal.writeln('\r\n\x1b[33mSession ended\x1b[0m');
+          // Mark session as closed in DB
+          dispatch(
+            updatePtySession({
+              id: tabId,
+              input: { status: 'closed' },
+            })
+          );
         } else {
           dispatch(setConnectionStatus('reconnecting'));
           dispatch(incrementReconnectAttempts());
+          // Mark session as disconnected in DB
+          dispatch(disconnectSession(tabId));
         }
       };
 
@@ -121,9 +183,22 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
       console.error('[PTY] Error:', err);
       dispatch(setError('Failed to create PTY session'));
       dispatch(setConnectionStatus('disconnected'));
-    }
-  }, [terminal, dispatch]);
+      dispatch(setTabConnected({ id: tabId, isConnected: false }));
 
+      // If reconnect failed, the PTY might be dead - mark as closed
+      if (isReconnectRef.current) {
+        dispatch(
+          updatePtySession({
+            id: tabId,
+            input: { status: 'closed' },
+          })
+        );
+        isReconnectRef.current = false;
+      }
+    }
+  }, [terminal, dispatch, tabId]);
+
+  // Auto-reconnect logic
   useEffect(() => {
     if (connectionStatus === 'reconnecting') {
       if (reconnectAttempts > 5) {
@@ -142,6 +217,7 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
     }
   }, [connectionStatus, reconnectAttempts, connect]);
 
+  // Handle terminal resize
   useEffect(() => {
     if (!terminal) return;
 
@@ -164,6 +240,7 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
     return () => disposable.dispose();
   }, [terminal]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isManuallyClosedRef.current = true;
@@ -172,5 +249,5 @@ export function useTerminalConnection(terminal: Terminal | null, initialPtyId?: 
     };
   }, []);
 
-  return { connect, socket: socketRef };
+  return { connect, socket: socketRef, ptyId: ptyIdRef };
 }

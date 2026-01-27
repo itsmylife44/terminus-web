@@ -25,15 +25,24 @@ export default function TerminalPage() {
       <TerminalTabs />
       <div className="flex-1 overflow-hidden relative">
         <TerminalContainer>
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className="w-full h-full"
-              style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
-            >
-              <TerminalClient ptyId={tab.ptyId} isActive={tab.id === activeTabId} />
-            </div>
-          ))}
+          {tabs.map((tab) => {
+            // Check if this is a new tab (placeholder ptyId) or reconnecting to existing session
+            const isPlaceholder = tab.ptyId.startsWith('pty-');
+
+            return (
+              <div
+                key={tab.id}
+                className="w-full h-full"
+                style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
+              >
+                <TerminalClient
+                  tabId={tab.id}
+                  existingPtyId={isPlaceholder ? undefined : tab.ptyId}
+                  isActive={tab.id === activeTabId}
+                />
+              </div>
+            );
+          })}
         </TerminalContainer>
       </div>
       <div className="px-2 py-1 bg-gray-900 border-t border-gray-700 text-xs text-gray-500 text-center shrink-0">

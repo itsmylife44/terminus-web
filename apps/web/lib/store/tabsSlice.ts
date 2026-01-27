@@ -1,9 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface Tab {
-  id: string;          // Unique tab identifier
-  ptyId: string;       // PTY session ID (for WebSocket connection)
-  title: string;       // Tab display title
+  id: string; // Unique tab identifier (same as DB session id for saved sessions)
+  ptyId: string; // PTY session ID from backend (for WebSocket connection)
+  title: string; // Tab display title
+  isConnected: boolean; // Whether WebSocket is currently connected
 }
 
 export interface TabsState {
@@ -31,29 +32,25 @@ export const tabsSlice = createSlice({
     /**
      * Add a new tab to the tabs list
      * Enforces max 10 tabs limit - does not add if limit reached
-     * Automatically sets as active if it's the first tab
+     * Automatically sets as active and becomes the active tab
      */
-    addTab: (
-      state,
-      action: PayloadAction<{ ptyId: string; title?: string }>
-    ) => {
+    addTab: (state, action: PayloadAction<{ id?: string; ptyId: string; title?: string }>) => {
       // Enforce max 10 tabs - silently return if limit reached
       if (state.tabs.length >= 10) {
         return;
       }
 
       const newTab: Tab = {
-        id: generateTabId(),
+        id: action.payload.id || generateTabId(),
         ptyId: action.payload.ptyId,
         title: action.payload.title || `Terminal ${state.tabs.length + 1}`,
+        isConnected: false,
       };
 
       state.tabs.push(newTab);
 
-      // Set as active if it's the first tab
-      if (state.activeTabId === null) {
-        state.activeTabId = newTab.id;
-      }
+      // Always set new tab as active
+      state.activeTabId = newTab.id;
     },
 
     /**
@@ -61,7 +58,7 @@ export const tabsSlice = createSlice({
      * Adjusts activeTabId if the removed tab was active
      */
     removeTab: (state, action: PayloadAction<string>) => {
-      const tabIndex = state.tabs.findIndex(tab => tab.id === action.payload);
+      const tabIndex = state.tabs.findIndex((tab) => tab.id === action.payload);
 
       if (tabIndex === -1) {
         return; // Tab not found, do nothing
@@ -86,7 +83,7 @@ export const tabsSlice = createSlice({
      * Set the active tab by ID
      */
     setActiveTab: (state, action: PayloadAction<string>) => {
-      const tabExists = state.tabs.some(tab => tab.id === action.payload);
+      const tabExists = state.tabs.some((tab) => tab.id === action.payload);
       if (tabExists) {
         state.activeTabId = action.payload;
       }
@@ -95,18 +92,36 @@ export const tabsSlice = createSlice({
     /**
      * Update a tab's title by ID
      */
-    updateTabTitle: (
-      state,
-      action: PayloadAction<{ id: string; title: string }>
-    ) => {
-      const tab = state.tabs.find(t => t.id === action.payload.id);
+    updateTabTitle: (state, action: PayloadAction<{ id: string; title: string }>) => {
+      const tab = state.tabs.find((t) => t.id === action.payload.id);
       if (tab) {
         tab.title = action.payload.title;
+      }
+    },
+
+    /**
+     * Update a tab's PTY ID (after connection established)
+     */
+    updateTabPtyId: (state, action: PayloadAction<{ id: string; ptyId: string }>) => {
+      const tab = state.tabs.find((t) => t.id === action.payload.id);
+      if (tab) {
+        tab.ptyId = action.payload.ptyId;
+      }
+    },
+
+    /**
+     * Set a tab's connection status
+     */
+    setTabConnected: (state, action: PayloadAction<{ id: string; isConnected: boolean }>) => {
+      const tab = state.tabs.find((t) => t.id === action.payload.id);
+      if (tab) {
+        tab.isConnected = action.payload.isConnected;
       }
     },
   },
 });
 
-export const { addTab, removeTab, setActiveTab, updateTabTitle } =
+export const { addTab, removeTab, setActiveTab, updateTabTitle, updateTabPtyId, setTabConnected } =
   tabsSlice.actions;
+
 export default tabsSlice.reducer;
