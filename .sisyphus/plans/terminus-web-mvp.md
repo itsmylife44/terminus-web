@@ -223,7 +223,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 2. Create WebSocket PTY Server - Basic Structure
+- [x] 2. Create WebSocket PTY Server - Basic Structure
 
   **What to do**:
   - Set up TypeScript configuration in `apps/pty-server/`
