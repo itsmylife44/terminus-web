@@ -686,7 +686,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 8. WebSocket Integration
+- [x] 8. WebSocket Integration
 
   **What to do**:
   - Install `@xterm/addon-attach`

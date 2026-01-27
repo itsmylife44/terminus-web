@@ -17,7 +17,6 @@ pnpm-error.log*
 # Build artifacts
 dist/
 build/
-.next/
 out/
 .swc/
 
@@ -35,10 +34,6 @@ out/
 ecosystem.config.js.bak
 pm2-logs/
 
-# Sisyphus (keep .sisyphus/plans, ignore notepads and boulder)
-.sisyphus/notepads/
-.sisyphus/boulder.json
-
 # Testing
 coverage/
 .nyc_output/
@@ -47,4 +42,3 @@ coverage/
 Thumbs.db
 .AppleDouble
 .LSOverride
-.turbo/cache/
