@@ -429,11 +429,11 @@ EOF
 }
 EOF
     
-    # Create log directory
     mkdir -p /var/log/caddy
-    chown caddy:caddy /var/log/caddy
+    touch /var/log/caddy/terminus.log
+    chown -R caddy:caddy /var/log/caddy
     
-    # Validate Caddy config
+    caddy fmt --overwrite "$CADDY_CONFIG"
     caddy validate --config "$CADDY_CONFIG"
     
     # Reload Caddy
