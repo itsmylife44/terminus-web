@@ -1,10 +1,12 @@
+import { TerminalClient } from '@/components/terminal/TerminalClient';
+import { TerminalContainer } from '@/components/terminal/TerminalContainer';
+
 export default function TerminalPage() {
   return (
-    <main className="flex min-h-screen flex-col bg-black p-4">
-      <div className="border border-white/20 p-4 rounded h-full text-green-500 font-mono">
-        <p>Terminal initialized...</p>
-        <p className="animate-pulse">_</p>
-      </div>
+    <main className="flex h-screen w-screen flex-col bg-[#1a1a1a] overflow-hidden">
+      <TerminalContainer>
+        <TerminalClient />
+      </TerminalContainer>
     </main>
   );
 }
