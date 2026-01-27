@@ -19,6 +19,11 @@ dist/
 build/
 out/
 .swc/
+.turbo/cache/
+.next/
+
+# AI/Dev tools
+.sisyphus/
 
 # IDE and editor files
 .vscode/
