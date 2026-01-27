@@ -28,7 +28,7 @@ export class OpenCodeAPIClient {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_OPENCODE_URL || 'http://localhost:3001';
+    this.baseUrl = '/api/opencode';
   }
 
   /**
