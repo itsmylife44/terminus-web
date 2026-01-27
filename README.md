@@ -102,6 +102,7 @@ NEXT_PUBLIC_OPENCODE_COMMAND=/path/to/opencode
 | `NEXT_PUBLIC_OPENCODE_URL`     | `http://localhost:3001` | URL of OpenCode serve (browser WebSocket) |
 | `OPENCODE_INTERNAL_URL`        | `http://localhost:3001` | Internal URL for server-side API proxy    |
 | `NEXT_PUBLIC_OPENCODE_COMMAND` | (shell)                 | Command to run in PTY (optional)          |
+| `DATABASE_PATH`                | `./data/terminus.db`    | SQLite database path for session storage  |
 
 > **Note**: See `apps/web/.env.example` for a complete template with descriptions.
 

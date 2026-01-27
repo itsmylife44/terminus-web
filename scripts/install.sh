@@ -288,7 +288,8 @@ install_dependencies() {
     log_step "Installing system dependencies..."
     
     apt-get update
-    apt-get install -y git curl build-essential
+    # build-essential and python3 are needed for native module compilation (better-sqlite3)
+    apt-get install -y git curl build-essential python3
     
     install_nodejs
     install_pm2
@@ -342,10 +343,15 @@ configure_environment() {
     log_step "Configuring environment variables..."
     
     local WEB_ENV="$INSTALL_DIR/apps/web/.env.local"
+    local DATA_DIR="$INSTALL_DIR/data"
     local PROTOCOL="http"
     if [[ "$USE_HTTPS" = true ]]; then
         PROTOCOL="https"
     fi
+    
+    # Create data directory for SQLite database
+    mkdir -p "$DATA_DIR"
+    chown $TERMINUS_USER:$TERMINUS_USER "$DATA_DIR"
     
     cat > "$WEB_ENV" << EOF
 NEXT_PUBLIC_OPENCODE_URL=${PROTOCOL}://${DOMAIN}
@@ -354,6 +360,9 @@ NODE_ENV=production
 TERMINUS_WEB_PORT=${TERMINUS_WEB_PORT:-3000}
 OPENCODE_SERVE_PORT=${OPENCODE_SERVE_PORT:-3001}
 OPENCODE_INTERNAL_URL=http://localhost:${OPENCODE_SERVE_PORT:-3001}
+
+# SQLite database path for session persistence
+DATABASE_PATH=${DATA_DIR}/terminus.db
 EOF
     
     chown $TERMINUS_USER:$TERMINUS_USER "$WEB_ENV"

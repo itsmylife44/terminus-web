@@ -47,3 +47,10 @@ coverage/
 Thumbs.db
 .AppleDouble
 .LSOverride
+
+# Database
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
