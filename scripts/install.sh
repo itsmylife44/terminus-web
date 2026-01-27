@@ -28,6 +28,7 @@ DOMAIN=""
 OPENCODE_PATH=""
 SSL_EMAIL=""
 USE_HTTPS=false
+OPENCODE_VERSION="latest"
 
 cleanup_on_error() {
     echo -e "${RED}[ERROR]${NC} Installation failed at line $1" >&2
@@ -166,21 +167,15 @@ gather_user_input() {
         fi
     done
     
-    # OpenCode path
     echo
     read -p "Enter OpenCode installation path [/usr/local/bin/opencode]: " OPENCODE_PATH
     OPENCODE_PATH=${OPENCODE_PATH:-/usr/local/bin/opencode}
     
-    if [[ ! -f "$OPENCODE_PATH" ]]; then
-        log_warning "OpenCode not found at: $OPENCODE_PATH"
-        log_warning "You can install it later using: scripts/install-opencode.sh"
-        read -p "Continue without OpenCode? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    else
+    if [[ -f "$OPENCODE_PATH" ]]; then
         log_success "OpenCode found at: $OPENCODE_PATH"
+    else
+        log_warning "OpenCode not found at: $OPENCODE_PATH"
+        log_warning "OpenCode will be installed automatically during setup"
     fi
     
     # Confirmation
@@ -245,6 +240,55 @@ install_caddy() {
     log_success "Caddy installed"
 }
 
+install_opencode() {
+    log_step "Installing OpenCode..."
+    
+    # Check if OpenCode already exists at the specified path
+    if [[ -f "$OPENCODE_PATH" ]]; then
+        local VERSION=$("$OPENCODE_PATH" version 2>/dev/null || echo "unknown")
+        log_success "OpenCode already installed at $OPENCODE_PATH (version: $VERSION)"
+        return
+    fi
+    
+    # Create install directory
+    local OPENCODE_DIR=$(dirname "$OPENCODE_PATH")
+    mkdir -p "$OPENCODE_DIR"
+    
+    # Download and install OpenCode using the official installer
+    log_step "Downloading OpenCode..."
+    
+    # Use the official install script
+    curl -fsSL https://opencode.ai/install.sh | bash -s -- --install-dir "$OPENCODE_DIR"
+    
+    # If installed to a different location, create symlink
+    if [[ -f "/root/.opencode/bin/opencode" && ! -f "$OPENCODE_PATH" ]]; then
+        ln -sf /root/.opencode/bin/opencode "$OPENCODE_PATH"
+    fi
+    
+    # Also install for terminus user
+    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install.sh | bash" || true
+    
+    # Verify installation
+    if [[ -f "$OPENCODE_PATH" ]]; then
+        local VERSION=$("$OPENCODE_PATH" version 2>/dev/null || echo "installed")
+        log_success "OpenCode installed at $OPENCODE_PATH (version: $VERSION)"
+    else
+        log_warning "OpenCode installed but not at expected path. Checking common locations..."
+        
+        # Check common installation paths
+        for path in "/home/$TERMINUS_USER/.opencode/bin/opencode" "/usr/local/bin/opencode" "/root/.opencode/bin/opencode"; do
+            if [[ -f "$path" ]]; then
+                OPENCODE_PATH="$path"
+                log_success "Found OpenCode at: $OPENCODE_PATH"
+                return
+            fi
+        done
+        
+        log_error "OpenCode installation failed. Please install manually."
+        exit 1
+    fi
+}
+
 install_dependencies() {
     log_step "Installing system dependencies..."
     
@@ -254,6 +298,7 @@ install_dependencies() {
     install_nodejs
     install_pm2
     install_caddy
+    install_opencode
     
     log_success "All dependencies installed"
 }
@@ -297,27 +342,19 @@ build_application() {
 configure_environment() {
     log_step "Configuring environment variables..."
     
-    # PTY Server .env
-    local PTY_ENV="$INSTALL_DIR/apps/pty-server/.env"
-    cat > "$PTY_ENV" << EOF
-WS_PORT=3001
-OPENCODE_PATH=$OPENCODE_PATH
-NODE_ENV=production
-EOF
-    
-    # Web Frontend .env.local
     local WEB_ENV="$INSTALL_DIR/apps/web/.env.local"
-    local WS_PROTOCOL="ws"
+    local PROTOCOL="http"
     if [[ "$USE_HTTPS" = true ]]; then
-        WS_PROTOCOL="wss"
+        PROTOCOL="https"
     fi
     
     cat > "$WEB_ENV" << EOF
-NEXT_PUBLIC_WS_URL=${WS_PROTOCOL}://${DOMAIN}/ws
+NEXT_PUBLIC_OPENCODE_URL=${PROTOCOL}://${DOMAIN}
+NEXT_PUBLIC_OPENCODE_COMMAND=$OPENCODE_PATH
 NODE_ENV=production
 EOF
     
-    chown $TERMINUS_USER:$TERMINUS_USER "$PTY_ENV" "$WEB_ENV"
+    chown $TERMINUS_USER:$TERMINUS_USER "$WEB_ENV"
     
     log_success "Environment configured"
 }
@@ -348,21 +385,19 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     {
-      name: 'terminus-pty',
-      cwd: '$INSTALL_DIR/apps/pty-server',
-      script: 'npm',
-      args: 'start',
+      name: 'opencode-serve',
+      cwd: '/home/$TERMINUS_USER',
+      script: '$OPENCODE_PATH',
+      args: 'serve --port 3001 --hostname 0.0.0.0',
       env: {
-        WS_PORT: 3001,
-        OPENCODE_PATH: '$OPENCODE_PATH',
         NODE_ENV: 'production'
       },
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: '512M',
-      error_file: '/var/log/pm2/terminus-pty-error.log',
-      out_file: '/var/log/pm2/terminus-pty-out.log',
+      error_file: '/var/log/pm2/opencode-serve-error.log',
+      out_file: '/var/log/pm2/opencode-serve-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
@@ -382,12 +417,10 @@ configure_caddy() {
     
     local CADDY_CONFIG="/etc/caddy/Caddyfile"
     
-    # Backup existing config
     if [[ -f "$CADDY_CONFIG" ]]; then
         cp "$CADDY_CONFIG" "${CADDY_CONFIG}.backup.$(date +%s)"
     fi
     
-    # Create Caddy config
     cat > "$CADDY_CONFIG" << EOF
 $DOMAIN {
 EOF
@@ -404,14 +437,13 @@ EOF
     
     cat >> "$CADDY_CONFIG" << 'EOF'
 
-    reverse_proxy localhost:3000
-
-    @websocket {
-        path /ws
-        header Connection *Upgrade*
-        header Upgrade websocket
+    handle /pty/* {
+        reverse_proxy localhost:3001
     }
-    reverse_proxy @websocket localhost:3001
+
+    handle {
+        reverse_proxy localhost:3000
+    }
 
     log {
         output file /var/log/caddy/terminus.log
@@ -436,7 +468,6 @@ EOF
     caddy fmt --overwrite "$CADDY_CONFIG"
     caddy validate --config "$CADDY_CONFIG"
     
-    # Reload Caddy
     systemctl reload caddy
     
     log_success "Caddy configured and reloaded"
@@ -468,18 +499,14 @@ configure_firewall() {
         return
     fi
     
-    # Allow HTTP/HTTPS
     ufw allow 80/tcp comment 'Caddy HTTP'
     ufw allow 443/tcp comment 'Caddy HTTPS'
     
-    # Deny direct access to application ports
     ufw deny 3000/tcp comment 'Block direct access to Next.js'
-    ufw deny 3001/tcp comment 'Block direct access to PTY server'
+    ufw deny 3001/tcp comment 'Block direct access to OpenCode serve'
     
-    # Ensure SSH is allowed
     ufw allow ssh comment 'SSH access'
     
-    # Enable UFW if not already enabled
     if ! ufw status | grep -q "Status: active"; then
         log_warning "UFW is not enabled. Enable it manually with: ufw enable"
     fi
@@ -492,24 +519,21 @@ verify_installation() {
     
     local ERRORS=0
     
-    # Check if PM2 apps are running
     if ! su - "$TERMINUS_USER" -c "pm2 list" | grep -q "terminus-web.*online"; then
         log_error "terminus-web is not running"
         ((ERRORS++))
     fi
     
-    if ! su - "$TERMINUS_USER" -c "pm2 list" | grep -q "terminus-pty.*online"; then
-        log_error "terminus-pty is not running"
+    if ! su - "$TERMINUS_USER" -c "pm2 list" | grep -q "opencode-serve.*online"; then
+        log_error "opencode-serve is not running"
         ((ERRORS++))
     fi
     
-    # Check if Caddy is running
     if ! systemctl is-active --quiet caddy; then
         log_error "Caddy is not running"
         ((ERRORS++))
     fi
     
-    # Check if ports are listening
     sleep 3
     if ! ss -tlnp | grep -q ":3000"; then
         log_error "Port 3000 (Next.js) is not listening"
@@ -517,7 +541,7 @@ verify_installation() {
     fi
     
     if ! ss -tlnp | grep -q ":3001"; then
-        log_error "Port 3001 (PTY server) is not listening"
+        log_error "Port 3001 (OpenCode serve) is not listening"
         ((ERRORS++))
     fi
     
@@ -538,12 +562,16 @@ print_summary() {
     echo
     echo -e "${GREEN}╔════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║                                                ║${NC}"
-    echo -e "${GREEN}║     TERMINUS-WEB INSTALLATION COMPLETE! 🎉     ║${NC}"
+    echo -e "${GREEN}║     TERMINUS-WEB INSTALLATION COMPLETE!        ║${NC}"
     echo -e "${GREEN}║                                                ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     echo
     echo -e "${CYAN}Access your terminal:${NC}"
     echo -e "  ${GREEN}${PROTOCOL}://${DOMAIN}${NC}"
+    echo
+    echo -e "${CYAN}Architecture:${NC}"
+    echo -e "  Browser -> Caddy -> Next.js (port 3000)"
+    echo -e "  Browser -> Caddy -> OpenCode serve (port 3001, /pty/* routes)"
     echo
     echo -e "${CYAN}Service Management:${NC}"
     echo -e "  Status:  ${YELLOW}sudo su - $TERMINUS_USER -c 'pm2 status'${NC}"

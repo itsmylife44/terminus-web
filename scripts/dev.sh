@@ -2,15 +2,10 @@
 set -e
 
 echo "Starting Terminus-Web in development mode..."
+echo ""
+echo "NOTE: You need to run 'opencode serve --port 3001 --hostname 127.0.0.1' separately"
+echo "      or install OpenCode first: curl -fsSL https://opencode.ai/install.sh | bash"
+echo ""
 
-echo "Starting PTY server..."
-(cd apps/pty-server && npm run dev) &
-PTY_PID=$!
-
-echo "Starting web frontend..."
-(cd apps/web && npm run dev) &
-WEB_PID=$!
-
-trap "echo 'Stopping services...'; kill $PTY_PID $WEB_PID 2>/dev/null; exit" INT TERM
-
-wait
+echo "Starting web frontend on http://localhost:3000..."
+cd apps/web && npm run dev

@@ -1,13 +1,26 @@
 # Terminus-Web
 
-## Quick Install (Ubuntu 24.04)
+Web-based terminal that runs the OpenCode CLI/TUI in your browser with full interactivity using a real PTY (Pseudo-Terminal) environment.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.3/scripts/install.sh -o install.sh && sudo bash install.sh
+## Architecture
+
+```
+Browser (ghostty-web) → Caddy → Next.js (port 3000)
+                            └→ OpenCode serve (port 3001, /pty/* routes)
 ```
 
-This automated installer will:
-- Install Node.js 20, PM2, and Caddy
+- **Frontend**: Next.js with ghostty-web terminal emulator
+- **Backend**: `opencode serve` provides the PTY API
+- **Reverse Proxy**: Caddy handles TLS and routing
+
+## Quick Install (Ubuntu 24.04/22.04)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/install.sh -o install.sh && sudo bash install.sh
+```
+
+The installer will:
+- Install Node.js 20, PM2, Caddy, and OpenCode
 - Create a `terminus` system user
 - Clone and build the application
 - Configure automatic HTTPS with Let's Encrypt (for domains)
@@ -18,84 +31,116 @@ This automated installer will:
 - Ubuntu 24.04 LTS or 22.04 LTS
 - Root access (sudo)
 - A domain pointing to your server (recommended for HTTPS)
-- OpenCode binary (or install it during setup)
 
 ### What You'll Be Asked
 - Domain name or IP address
-- Path to OpenCode binary (default: `/usr/local/bin/opencode`)
+- Path for OpenCode binary (default: `/usr/local/bin/opencode`)
 - Email for SSL certificate (optional, for Let's Encrypt notifications)
 
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.0.3/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
 ```
 
 ---
 
-Terminus-Web is a web-based terminal emulator that runs the OpenCode CLI/TUI in your browser with full interactivity. It provides a real PTY (Pseudo-Terminal) environment, allowing you to interact with OpenCode as if you were using a native terminal.
+## Development Setup
 
-## Prerequisites
+### Prerequisites
+- Node.js 20+
+- OpenCode installed (`curl -fsSL https://opencode.ai/install.sh | bash`)
 
-- **Node.js**: version 20 or higher
-- **OpenCode Binary**: Must be installed on the server (default path: `/usr/local/bin/opencode`)
+### Quick Start
 
-## Quick Start (< 5 minutes)
-
-1. **Clone the repository**:
+1. **Clone and install**:
    ```bash
    git clone https://github.com/itsmylife44/terminus-web.git
    cd terminus-web
-   ```
-
-2. **Install dependencies**:
-   ```bash
    npm install
    ```
 
-3. **Run in development mode**:
+2. **Start OpenCode serve** (in one terminal):
    ```bash
+   opencode serve --port 3001 --hostname 127.0.0.1
+   ```
+
+3. **Start the frontend** (in another terminal):
+   ```bash
+   cd apps/web
    npm run dev
    ```
-   Access the frontend at `http://localhost:3000`. The PTY server will start automatically on port `3001`.
 
-## Environment Variables
+4. **Open** http://localhost:3000/terminal
 
-The following environment variables can be configured:
+### Environment Variables
 
-| Variable | Service | Default | Description |
-|----------|---------|---------|-------------|
-| `PORT` | web | `3000` | Port for the Next.js frontend |
-| `NEXT_PUBLIC_WS_URL` | web | `ws://localhost:3001` | WebSocket URL for the terminal connection |
-| `WS_PORT` | pty-server | `3001` | Port for the WebSocket PTY server |
-| `OPENCODE_PATH` | pty-server | `/usr/local/bin/opencode` | Absolute path to the OpenCode binary |
+Create `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_OPENCODE_URL=http://localhost:3001
+NEXT_PUBLIC_OPENCODE_COMMAND=/path/to/opencode
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_OPENCODE_URL` | `http://localhost:3001` | URL of OpenCode serve |
+| `NEXT_PUBLIC_OPENCODE_COMMAND` | (shell) | Command to run in PTY (optional) |
+
+---
 
 ## Production Deployment
 
 ### Automated Install (Recommended)
 
-Use the one-liner installer for Ubuntu 24.04/22.04 (see [Quick Install](#quick-install-ubuntu-2404) above).
+Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubuntu-240422) above).
 
-### Manual Install with PM2
+### Manual Install
 
-If you prefer manual installation or need a different OS:
-
-1. **Build the project**:
+1. **Install OpenCode**:
    ```bash
+   curl -fsSL https://opencode.ai/install.sh | bash
+   ```
+
+2. **Build the project**:
+   ```bash
+   npm install
    npm run build
    ```
 
-2. **Start with PM2**:
-   ```bash
-   npm run start
+3. **Configure environment** (`apps/web/.env.local`):
+   ```env
+   NEXT_PUBLIC_OPENCODE_URL=https://yourdomain.com
+   NEXT_PUBLIC_OPENCODE_COMMAND=/usr/local/bin/opencode
+   NODE_ENV=production
    ```
-   This uses the `ecosystem.config.js` to manage both the web frontend and the PTY server.
 
-## TLS / WSS Configuration
+4. **Start services** (PM2 recommended):
+   ```bash
+   # Start Next.js
+   cd apps/web && npm start
+   
+   # Start OpenCode serve
+   opencode serve --port 3001 --hostname 0.0.0.0
+   ```
 
-In production, you should always use `wss://` (WebSocket Secure). This requires a reverse proxy like **nginx** or **Caddy** to handle TLS termination.
+### Caddy Configuration
 
-### nginx Example
+```caddyfile
+yourdomain.com {
+    tls your@email.com
+
+    handle /pty/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle {
+        reverse_proxy localhost:3000
+    }
+}
+```
+
+### nginx Configuration
 
 ```nginx
 server {
@@ -105,15 +150,13 @@ server {
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
     
-    # Frontend
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
     
-    # WebSocket
-    location /ws {
+    location /pty/ {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -123,21 +166,33 @@ server {
 }
 ```
 
-### Caddy Example
-
-```caddyfile
-yourdomain.com {
-    reverse_proxy localhost:3000
-    reverse_proxy /ws localhost:3001
-}
-```
-
-> **Note**: After setting up TLS, ensure you update `NEXT_PUBLIC_WS_URL` to `wss://yourdomain.com/ws` (or your specific WS path).
+---
 
 ## Features
 
-- **Real PTY**: Full terminal interactivity with `TERM=xterm-256color`.
-- **Responsive**: Auto-resizing terminal using `xterm-addon-fit`.
-- **Clipboard**: Native copy/paste support (Ctrl+Shift+C/V).
-- **Resilient**: Automatic reconnection with exponential backoff and heartbeat monitoring.
-- **Status Indicator**: Real-time connection status (Connected, Reconnecting, Disconnected).
+- **Real PTY**: Full terminal interactivity with proper terminal emulation
+- **ghostty-web**: Same terminal emulator OpenCode uses internally
+- **Responsive**: Auto-resizing terminal
+- **Clipboard**: Native copy/paste support
+- **Resilient**: Automatic reconnection with exponential backoff
+- **Status Indicator**: Real-time connection status
+
+## Service Management (Production)
+
+```bash
+# Status
+sudo su - terminus -c 'pm2 status'
+
+# Logs
+sudo su - terminus -c 'pm2 logs'
+
+# Restart
+sudo su - terminus -c 'pm2 restart all'
+
+# Stop
+sudo su - terminus -c 'pm2 stop all'
+```
+
+## License
+
+MIT

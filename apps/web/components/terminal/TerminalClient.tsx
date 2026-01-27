@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { ClipboardAddon } from '@xterm/addon-clipboard';
-import '@xterm/xterm/css/xterm.css';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import type { Terminal as TerminalType, FitAddon as FitAddonType } from 'ghostty-web';
 import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { DisconnectedOverlay } from './DisconnectedOverlay';
 import { SessionEndedOverlay } from './SessionEndedOverlay';
@@ -13,55 +10,73 @@ import { resetReconnectAttempts, setConnectionStatus, setExitCode } from '@/lib/
 
 export function TerminalClient() {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const terminalInstance = useRef<Terminal | null>(null);
-  const fitAddon = useRef<FitAddon | null>(null);
-  const { connect } = useTerminalConnection(terminalInstance.current);
+  const fitAddonRef = useRef<FitAddonType | null>(null);
+  const terminalInstanceRef = useRef<TerminalType | null>(null);
+  const [terminal, setTerminal] = useState<TerminalType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { connect } = useTerminalConnection(terminal);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (!terminalRef.current || terminalInstance.current) return;
+    if (!terminalRef.current || terminalInstanceRef.current) return;
 
-    const terminal = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      scrollback: 100,
-      theme: {
-        background: '#1a1a1a',
-        foreground: '#e0e0e0',
-        cursor: '#ffffff',
-      },
-    });
-
-    fitAddon.current = new FitAddon();
-    terminal.loadAddon(fitAddon.current);
-    terminal.loadAddon(new ClipboardAddon());
+    const container = terminalRef.current;
     
-    terminal.open(terminalRef.current);
-    fitAddon.current.fit();
+    async function initGhostty() {
+      try {
+        const ghostty = await import('ghostty-web');
+        await ghostty.init();
 
-    terminalInstance.current = terminal;
+        const term = new ghostty.Terminal({
+          cursorBlink: true,
+          fontSize: 14,
+          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+          scrollback: 10000,
+          theme: {
+            background: '#1a1a1a',
+            foreground: '#e0e0e0',
+            cursor: '#ffffff',
+          },
+        });
+
+        const fitAddon = new ghostty.FitAddon();
+        fitAddonRef.current = fitAddon;
+        terminalInstanceRef.current = term;
+        term.loadAddon(fitAddon);
+        
+        term.open(container);
+        fitAddon.fit();
+        
+        setTerminal(term);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to init terminal:', err);
+        setIsLoading(false);
+      }
+    }
+
+    initGhostty();
 
     let resizeTimeout: NodeJS.Timeout;
     const observer = new ResizeObserver(() => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        fitAddon.current?.fit();
+        fitAddonRef.current?.fit();
       }, 100);
     });
-    observer.observe(terminalRef.current);
+    observer.observe(container);
 
     return () => {
       observer.disconnect();
-      terminal.dispose();
+      terminalInstanceRef.current?.dispose();
     };
   }, []);
 
   useEffect(() => {
-    if (terminalInstance.current) {
+    if (terminal) {
       connect();
     }
-  }, [connect]);
+  }, [terminal, connect]);
 
   const handleReconnect = useCallback(() => {
     dispatch(resetReconnectAttempts());
@@ -76,7 +91,12 @@ export function TerminalClient() {
   }, [connect, dispatch]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full bg-black">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center text-white">
+          Loading terminal...
+        </div>
+      )}
       <div ref={terminalRef} className="w-full h-full" />
       <DisconnectedOverlay onReconnect={handleReconnect} />
       <SessionEndedOverlay onNewSession={handleNewSession} />
