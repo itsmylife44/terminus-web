@@ -68,3 +68,19 @@
 - **TLS note**: PM2 config documents that production WSS requires nginx/Caddy reverse proxy with TLS termination (not implemented in Node.js directly)
 - Verification: All shell scripts validated with `bash -n`, ecosystem.config.js parses cleanly, scripts are executable (chmod +x)
 - **Lesson**: PM2 ecosystem config is deployment infrastructure, not application code - operational comments are necessary for DevOps setup
+
+## Task 12: Documentation
+
+### Approaches
+- Structured documentation into three distinct files: README.md (User/Operator), ARCHITECTURE.md (Internal/Design), and CONTRIBUTING.md (Contributor).
+- Included practical deployment examples for nginx and Caddy, as these are critical for WSS support in production.
+- Documented the hybrid binary/JSON WebSocket protocol clearly to assist future protocol extensions.
+
+### Patterns
+- Used a consistent "Prerequisites -> Quick Start -> Configuration" flow in README.md.
+- Highlighted security limitations explicitly as this is an MVP.
+- Leveraged Mermaid-style ASCII diagrams for architecture visualization to ensure compatibility across all markdown viewers.
+
+### Successful Approaches
+- Detailed environment variable table with defaults helps developers configure the system quickly.
+- Grouping production deployment instructions with PM2 ensures a reliable operational starting point.

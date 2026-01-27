@@ -1032,7 +1032,7 @@ Task 12 (Documentation)
 
 ---
 
-- [ ] 12. Documentation: README and ARCHITECTURE
+- [x] 12. Documentation: README and ARCHITECTURE
 
   **What to do**:
   - Create comprehensive README.md with:
