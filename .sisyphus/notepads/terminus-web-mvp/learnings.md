@@ -27,3 +27,13 @@
 - Build successful with no LSP diagnostics errors
 - Key insight: The hook properly manages socket lifecycle and terminal addon loading order
 
+## Task 9: Reconnection Logic and UI Overlay
+- Implemented exponential backoff with formula: `Math.min(1000 * Math.pow(2, attempts), 16000)`
+- Added `reconnectAttempts` to Redux state to track retries across components
+- Created `DisconnectedOverlay` that calculates its own countdown based on the same backoff formula
+- Created `SessionEndedOverlay` that only appears on explicit exit codes (differentiating form network drops)
+- Updated `useTerminalConnection` hook:
+  - Added `isManuallyClosedRef` to distinguish between intentional disconnects (no retry) and errors (retry)
+  - Used `setTimeout` for backoff delays
+  - Stops auto-retry after 5 attempts
+- Integrated overlays into `TerminalClient` with z-index positioning over the terminal canvas
