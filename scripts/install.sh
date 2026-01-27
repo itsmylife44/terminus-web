@@ -441,7 +441,9 @@ EOF
     
     cat >> "$CADDY_CONFIG" << EOF
 
-    handle /pty/* {
+    # Match both /pty (POST to create session) and /pty/* (WebSocket connections, PUT for resize)
+    @pty path /pty /pty/*
+    handle @pty {
         reverse_proxy localhost:${OPENCODE_SERVE_PORT:-3001}
     }
 

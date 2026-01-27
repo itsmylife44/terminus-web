@@ -6,7 +6,7 @@ Web-based terminal that runs the OpenCode CLI/TUI in your browser with full inte
 
 ```
 Browser (ghostty-web) → Caddy → Next.js (port 3000)
-                            └→ OpenCode serve (port 3001, /pty/* routes)
+                            └→ OpenCode serve (port 3001, /pty and /pty/* routes)
 ```
 
 - **Frontend**: Next.js with ghostty-web terminal emulator
@@ -159,7 +159,9 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
 yourdomain.com {
     tls your@email.com
 
-    handle /pty/* {
+    # Match both /pty (POST to create session) and /pty/* (WebSocket, resize)
+    @pty path /pty /pty/*
+    handle @pty {
         reverse_proxy localhost:3001  # OPENCODE_SERVE_PORT
     }
 
@@ -185,7 +187,8 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    location /pty/ {
+    # Match both /pty (POST to create session) and /pty/* (WebSocket, resize)
+    location ~ ^/pty(/.*)?$ {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
