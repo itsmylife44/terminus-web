@@ -1,0 +1,125 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/**'
+      - '*.md'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+
+          # Remove 'v' prefix and split into parts
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Increment patch version
+          PATCH=$((PATCH + 1))
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_TAG"
+
+      - name: Update README with new version
+        run: |
+          NEW_TAG="${{ steps.next_version.outputs.new_tag }}"
+          OLD_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+
+          # Update install.sh URL in README
+          sed -i "s|terminus-web/${OLD_TAG}/scripts/install.sh|terminus-web/${NEW_TAG}/scripts/install.sh|g" README.md
+
+          # Update uninstall.sh URL in README
+          sed -i "s|terminus-web/${OLD_TAG}/scripts/uninstall.sh|terminus-web/${NEW_TAG}/scripts/uninstall.sh|g" README.md
+
+          echo "Updated README from $OLD_TAG to $NEW_TAG"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit README changes
+        run: |
+          NEW_TAG="${{ steps.next_version.outputs.new_tag }}"
+
+          # Check if there are changes to commit
+          if git diff --quiet README.md; then
+            echo "No README changes to commit"
+          else
+            git add README.md
+            git commit -m "chore(release): update install URLs to ${NEW_TAG}"
+          fi
+
+      - name: Create and push tag
+        run: |
+          NEW_TAG="${{ steps.next_version.outputs.new_tag }}"
+
+          # Push README changes first
+          git push origin main
+
+          # Create annotated tag
+          git tag -a "$NEW_TAG" -m "Release ${NEW_TAG}" -m "" -m "Auto-generated release from CI"
+
+          # Push tag
+          git push origin "$NEW_TAG"
+
+          echo "Created and pushed tag: $NEW_TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.next_version.outputs.new_tag }}
+          name: Release ${{ steps.next_version.outputs.new_tag }}
+          body: |
+            ## Auto-generated Release
+
+            **Changes since ${{ steps.get_tag.outputs.latest_tag }}:**
+
+            See [commit history](https://github.com/${{ github.repository }}/compare/${{ steps.get_tag.outputs.latest_tag }}...${{ steps.next_version.outputs.new_tag }}) for details.
+
+            ### Quick Install
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.next_version.outputs.new_tag }}/scripts/install.sh -o install.sh && sudo bash install.sh
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
