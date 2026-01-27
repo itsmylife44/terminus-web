@@ -47,3 +47,4 @@ coverage/
 Thumbs.db
 .AppleDouble
 .LSOverride
+.turbo/cache/
