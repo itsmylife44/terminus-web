@@ -62,10 +62,25 @@ export function useTerminalConnection(
 
     try {
       let ptyId = ptyIdRef.current;
+      let needsNewSession = !ptyId || !isReconnectRef.current;
 
-      // If we have an existing PTY ID, try to reconnect
-      // Otherwise, create a new PTY session
-      if (!ptyId || !isReconnectRef.current) {
+      // If we have an existing PTY ID, verify it still exists on the backend
+      if (ptyId && isReconnectRef.current) {
+        const checkResponse = await fetch(`${baseUrl}/pty/${ptyId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader && { Authorization: authHeader }),
+          },
+          body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
+        });
+
+        if (checkResponse.status === 404) {
+          needsNewSession = true;
+        }
+      }
+
+      if (needsNewSession) {
         const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
 
         const response = await fetch(`${baseUrl}/pty`, {
@@ -88,12 +103,12 @@ export function useTerminalConnection(
         const ptySession = await response.json();
         ptyId = ptySession.id;
         ptyIdRef.current = ptyId;
-        isReconnectRef.current = false;
+        isReconnectRef.current = true;
 
         // Update tab with the real PTY ID
         dispatch(updateTabPtyId({ id: tabId, ptyId: ptyId! }));
 
-        // Save session to database
+        // Save session to database (UPSERT - updates if exists)
         dispatch(
           createPtySession({
             id: tabId,
