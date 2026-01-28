@@ -48,11 +48,17 @@ function initSchema(db: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       last_connected_at TEXT NOT NULL DEFAULT (datetime('now')),
       cols INTEGER DEFAULT 80,
-      rows INTEGER DEFAULT 24
+      rows INTEGER DEFAULT 24,
+      last_client_id TEXT,
+      tmux_session_name TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_pty_sessions_status ON pty_sessions(status);
     CREATE INDEX IF NOT EXISTS idx_pty_sessions_created ON pty_sessions(created_at DESC);
+
+    -- Add new columns to existing databases (if they don't exist)
+    ALTER TABLE pty_sessions ADD COLUMN last_client_id TEXT;
+    ALTER TABLE pty_sessions ADD COLUMN tmux_session_name TEXT;
   `);
 }
 

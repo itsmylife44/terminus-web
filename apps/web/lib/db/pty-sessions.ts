@@ -17,6 +17,8 @@ export interface PtySession {
   cols: number;
   rows: number;
   occupied?: boolean;
+  last_client_id?: string;
+  tmux_session_name?: string;
 }
 
 export interface CreatePtySessionInput {
