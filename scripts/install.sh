@@ -245,11 +245,18 @@ install_go() {
         return
     fi
     
-    local GO_VERSION="1.23.4"
     local ARCH=$(dpkg --print-architecture)
     local GO_ARCH="amd64"
     [[ "$ARCH" == "arm64" ]] && GO_ARCH="arm64"
     
+    log_step "Fetching latest Go version..."
+    local GO_VERSION=$(curl -fsSL "https://go.dev/VERSION?m=text" | head -1 | sed 's/go//')
+    if [[ -z "$GO_VERSION" ]]; then
+        GO_VERSION="1.25.6"
+        log_warning "Could not fetch latest Go version, using $GO_VERSION"
+    fi
+    
+    log_step "Downloading Go $GO_VERSION..."
     curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz
     rm -rf /usr/local/go
     tar -C /usr/local -xzf /tmp/go.tar.gz
