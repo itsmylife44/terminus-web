@@ -140,9 +140,15 @@ export function useTerminalConnection(
         terminal.focus();
       };
 
+      socket.binaryType = 'arraybuffer';
+
       socket.onmessage = (event) => {
         try {
-          terminalRef.current?.write(event.data);
+          if (event.data instanceof ArrayBuffer) {
+            terminalRef.current?.write(new Uint8Array(event.data));
+          } else {
+            terminalRef.current?.write(event.data);
+          }
         } catch (err) {
           console.error('[PTY] Write error:', err);
         }
