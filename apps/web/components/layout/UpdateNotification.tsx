@@ -150,7 +150,6 @@ export function UpdateNotification() {
   };
 
   const handleConfirmUpdate = () => {
-    dispatch(hideConfirmDialog());
     triggerUpdate();
   };
 

@@ -70,6 +70,8 @@ export const updateSlice = createSlice({
       state.updateError = null;
       state.updateProgress = 0;
       state.updateStage = 'preparing';
+      state.showConfirmDialog = false;
+      state.isAutoUpdateTrigger = false;
     },
     setUpdateStage: (
       state,
