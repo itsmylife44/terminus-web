@@ -23,6 +23,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [isReady, setIsReady] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const hasRestoredSession = useRef(false);
 
   useEffect(() => {
@@ -56,21 +57,25 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
     if (isLoginPage) {
       if (isAuthenticated) {
+        setIsNavigating(true);
         router.replace('/');
       } else {
         setIsReady(true);
+        setIsNavigating(false);
       }
       return;
     }
 
     if (isAuthenticated) {
       setIsReady(true);
+      setIsNavigating(false);
     } else {
+      setIsNavigating(true);
       router.replace('/login');
     }
   }, [isAuthenticated, pathname, router]);
 
-  if (!isReady) {
+  if (!isReady || isNavigating) {
     return <LoadingScreen />;
   }
 
