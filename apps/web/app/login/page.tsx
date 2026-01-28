@@ -7,6 +7,7 @@ import { useAppDispatch } from '@/lib/store/hooks';
 import { login, setAuthError } from '@/lib/store/authSlice';
 import { openCodeClient } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function LoginPage() {
               <label htmlFor="username" className="block text-sm font-medium leading-6 mb-1">
                 Username
               </label>
-              <input
+              <Input
                 ref={usernameRef}
                 id="username"
                 name="username"
@@ -86,7 +87,6 @@ export default function LoginPage() {
                 required
                 defaultValue="admin"
                 autoComplete="username"
-                className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
               />
             </div>
 
@@ -94,14 +94,13 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium leading-6 mb-1">
                 Password
               </label>
-              <input
+              <Input
                 ref={passwordRef}
                 id="password"
                 name="password"
                 type="password"
                 required
                 autoComplete="current-password"
-                className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
               />
             </div>
           </div>
