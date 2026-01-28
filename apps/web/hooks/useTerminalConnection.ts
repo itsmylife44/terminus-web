@@ -206,8 +206,6 @@ export function useTerminalConnection(
 
         if (isManuallyClosedRef.current) {
           dispatch(setConnectionStatus('disconnected'));
-          // Mark session as disconnected in DB
-          dispatch(disconnectSession(tabId));
           return;
         }
 
@@ -285,7 +283,7 @@ export function useTerminalConnection(
         if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       };
     }
-  }, [connectionStatus, reconnectAttempts, connect]);
+  }, [connectionStatus, reconnectAttempts]);
 
   // Handle terminal resize
   useEffect(() => {

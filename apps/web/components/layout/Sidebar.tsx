@@ -141,16 +141,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     dispatch(fetchPtySessions());
   }, [dispatch]);
 
-  // Handle clicking on a PTY session
   const handleSessionClick = (session: PtySession) => {
-    // Check if this session is already open in a tab
+    if (session.status === 'closed') {
+      return;
+    }
+
     const existingTab = tabs.find((t) => t.id === session.id || t.ptyId === session.pty_id);
 
     if (existingTab) {
-      // Session already open, just switch to it
       dispatch(setActiveTab(existingTab.id));
     } else {
-      // Open new tab for this session
       dispatch(
         addTab({
           id: session.id,
@@ -160,7 +160,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       );
     }
 
-    // Navigate to terminal if not already there
     if (!pathname.startsWith('/terminal')) {
       router.push('/terminal');
     }
@@ -225,26 +224,30 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               const isOpenInTab = tabs.some(
                 (t) => t.id === session.id || t.ptyId === session.pty_id
               );
+              const isClosed = session.status === 'closed';
 
               return (
                 <button
                   type="button"
                   key={session.id}
                   onClick={() => handleSessionClick(session)}
+                  disabled={isClosed}
                   className={`group w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
-                    isOpenInTab
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-400 hover:bg-gray-900 hover:text-white'
+                    isClosed
+                      ? 'text-gray-600 cursor-not-allowed opacity-60'
+                      : isOpenInTab
+                        ? 'bg-gray-800 text-white cursor-pointer'
+                        : 'text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer'
                   }`}
                 >
                   <StatusDot status={session.status} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{session.title}</div>
                     <div className="text-xs text-gray-600 truncate">
-                      {formatRelativeTime(session.last_connected_at)}
+                      {isClosed ? 'Session ended' : formatRelativeTime(session.last_connected_at)}
                     </div>
                   </div>
-                  {session.status === 'closed' && (
+                  {isClosed && (
                     <button
                       type="button"
                       onClick={(e) => handleDeleteSession(e, session.id)}
