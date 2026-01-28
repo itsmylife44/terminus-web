@@ -19,9 +19,9 @@ export default function SettingsPage() {
     updateAvailable: hookUpdateAvailable,
     latestVersion: hookLatestVersion,
     isLoading: versionLoading,
+    checkForUpdates,
   } = useVersionCheck();
 
-  const [isCheckingVersion, setIsCheckingVersion] = useState(false);
   const [currentVersion, setCurrentVersion] = useState(APP_VERSION);
 
   useEffect(() => {
@@ -40,12 +40,7 @@ export default function SettingsPage() {
   }, []);
 
   const handleCheckForUpdates = async () => {
-    setIsCheckingVersion(true);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('terminus_version_check');
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setIsCheckingVersion(false);
+    await checkForUpdates();
   };
 
   const handleUpdateClick = () => {
@@ -99,12 +94,10 @@ export default function SettingsPage() {
             <Button
               type="button"
               onClick={handleCheckForUpdates}
-              disabled={isCheckingVersion || versionLoading}
+              disabled={versionLoading}
               variant="outline"
             >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isCheckingVersion || versionLoading ? 'animate-spin' : ''}`}
-              />
+              <RefreshCw className={`h-4 w-4 mr-2 ${versionLoading ? 'animate-spin' : ''}`} />
               Check for Updates
             </Button>
 

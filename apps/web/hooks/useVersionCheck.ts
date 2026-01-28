@@ -19,6 +19,7 @@ interface UseVersionCheckReturn {
   latestVersion: string | null;
   releaseUrl: string | null;
   isLoading: boolean;
+  checkForUpdates: () => Promise<void>;
 }
 
 const CACHE_KEY = 'terminus_version_check';
@@ -43,29 +44,31 @@ export function useVersionCheck(): UseVersionCheckReturn {
   const [releaseUrl, setReleaseUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkVersion = useCallback(async () => {
+  const checkVersion = useCallback(async (skipCache = false) => {
+    setIsLoading(true);
     try {
       const currentVersion = await fetchRuntimeVersion();
 
-      const cached = localStorage.getItem(CACHE_KEY);
       let release: GitHubRelease | null = null;
 
-      if (cached) {
-        try {
-          const cachedData: CachedVersionCheck = JSON.parse(cached);
-          const now = Date.now();
-          const cacheAge = now - cachedData.timestamp;
+      if (!skipCache) {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          try {
+            const cachedData: CachedVersionCheck = JSON.parse(cached);
+            const cacheAge = Date.now() - cachedData.timestamp;
 
-          if (cacheAge < CACHE_DURATION) {
-            release = {
-              tag_name: cachedData.version.startsWith('v')
-                ? cachedData.version
-                : `v${cachedData.version}`,
-              html_url: cachedData.url,
-              name: '',
-            };
-          }
-        } catch {}
+            if (cacheAge < CACHE_DURATION) {
+              release = {
+                tag_name: cachedData.version.startsWith('v')
+                  ? cachedData.version
+                  : `v${cachedData.version}`,
+                html_url: cachedData.url,
+                name: '',
+              };
+            }
+          } catch {}
+        }
       }
 
       if (!release) {
@@ -100,6 +103,10 @@ export function useVersionCheck(): UseVersionCheckReturn {
     }
   }, []);
 
+  const checkForUpdates = useCallback(async () => {
+    await checkVersion(true);
+  }, [checkVersion]);
+
   useEffect(() => {
     checkVersion();
   }, [checkVersion]);
@@ -109,5 +116,6 @@ export function useVersionCheck(): UseVersionCheckReturn {
     latestVersion,
     releaseUrl,
     isLoading,
+    checkForUpdates,
   };
 }
