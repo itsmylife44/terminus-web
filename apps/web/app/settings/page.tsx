@@ -13,6 +13,7 @@ import {
   SubscriptionDialog,
   type SubscriptionOptions,
 } from '@/components/settings/SubscriptionDialog';
+import { ConfigEditor } from '@/components/settings/ConfigEditor';
 
 interface OhMyOpenCodeStatus {
   installed: boolean;
@@ -272,6 +273,16 @@ export default function SettingsPage() {
               </Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration Editor</CardTitle>
+          <CardDescription>Edit OpenCode configuration files</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConfigEditor />
         </CardContent>
       </Card>
 
