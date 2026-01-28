@@ -33,12 +33,13 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       }
     }
     hasRestoredSession.current = true;
+    // Only mark checking complete AFTER session restoration attempt finishes
+    setIsChecking(false);
   }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
     // Handle routing based on auth state
     if (pathname === '/login') {
-      setIsChecking(false);
       if (isAuthenticated) {
         router.replace('/');
       }
@@ -46,7 +47,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     }
 
     if (isAuthenticated) {
-      setIsChecking(false);
       return;
     }
 
@@ -54,7 +54,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     router.replace('/login');
   }, [isAuthenticated, pathname, router]);
 
-  if (isChecking && pathname !== '/login') {
+  if (isChecking) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center gap-4">
