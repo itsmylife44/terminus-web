@@ -24,6 +24,7 @@ export interface UpdateState {
   autoUpdateEnabled: boolean;
   showConfirmDialog: boolean;
   isAutoUpdateTrigger: boolean;
+  dismissedVersion: string | null;
 }
 
 const getInitialAutoUpdateEnabled = (): boolean => {
@@ -51,6 +52,7 @@ const initialState: UpdateState = {
   autoUpdateEnabled: getInitialAutoUpdateEnabled(),
   showConfirmDialog: false,
   isAutoUpdateTrigger: false,
+  dismissedVersion: null,
 };
 
 export const updateSlice = createSlice({
@@ -64,6 +66,9 @@ export const updateSlice = createSlice({
       state.updateAvailable = true;
       state.latestVersion = action.payload.latestVersion;
       state.releaseUrl = action.payload.releaseUrl;
+      if (state.dismissedVersion !== action.payload.latestVersion) {
+        state.dismissedVersion = null;
+      }
     },
     startUpdate: (state) => {
       state.isUpdating = true;
@@ -97,6 +102,7 @@ export const updateSlice = createSlice({
       state.latestVersion = null;
       state.releaseUrl = null;
       state.updateError = null;
+      state.dismissedVersion = null;
     },
     toggleAutoUpdate: (state) => {
       state.autoUpdateEnabled = !state.autoUpdateEnabled;
@@ -107,10 +113,15 @@ export const updateSlice = createSlice({
       }
     },
     showConfirmDialog: (state, action: PayloadAction<boolean>) => {
-      state.showConfirmDialog = true;
+      state.showConfirmDialog = action.payload;
       state.isAutoUpdateTrigger = action.payload;
     },
     hideConfirmDialog: (state) => {
+      state.showConfirmDialog = false;
+      state.isAutoUpdateTrigger = false;
+    },
+    dismissUpdateNotification: (state, action: PayloadAction<string>) => {
+      state.dismissedVersion = action.payload;
       state.showConfirmDialog = false;
       state.isAutoUpdateTrigger = false;
     },
@@ -125,7 +136,7 @@ export const updateSlice = createSlice({
       state.updateError = null;
       state.showConfirmDialog = false;
       state.isAutoUpdateTrigger = false;
-      // Note: autoUpdateEnabled is NOT reset - it persists
+      state.dismissedVersion = null;
     },
   },
 });
@@ -139,6 +150,7 @@ export const {
   toggleAutoUpdate,
   showConfirmDialog,
   hideConfirmDialog,
+  dismissUpdateNotification,
   resetUpdateState,
 } = updateSlice.actions;
 

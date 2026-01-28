@@ -8,6 +8,7 @@ import {
   toggleAutoUpdate,
   showConfirmDialog,
   hideConfirmDialog,
+  dismissUpdateNotification,
   setUpdateAvailable,
 } from '@/lib/store/updateSlice';
 import { APP_VERSION } from '@/lib/version/versionChecker';
@@ -158,7 +159,7 @@ export function UpdateNotification() {
   }, [isOpen]);
 
   const handleUpdateClick = () => {
-    dispatch(showConfirmDialog(false));
+    dispatch(showConfirmDialog(true));
   };
 
   const handleConfirmUpdate = () => {
@@ -166,7 +167,11 @@ export function UpdateNotification() {
   };
 
   const handleCancelUpdate = () => {
-    dispatch(hideConfirmDialog());
+    if (displayLatestVersion) {
+      dispatch(dismissUpdateNotification(displayLatestVersion));
+    } else {
+      dispatch(hideConfirmDialog());
+    }
   };
 
   const handleToggleAutoUpdate = () => {

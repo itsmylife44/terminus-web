@@ -49,7 +49,7 @@ export default function SettingsPage() {
   };
 
   const handleUpdateClick = () => {
-    dispatch(showConfirmDialog(false));
+    dispatch(showConfirmDialog(true));
   };
 
   const displayUpdateAvailable = updateAvailable || hookUpdateAvailable;

@@ -41,6 +41,8 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
     updateStage,
     updateProgress,
     updateError,
+    latestVersion,
+    dismissedVersion,
   } = useAppSelector((state) => state.update);
 
   // Handle SSE update events
@@ -139,12 +141,26 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
     dispatch(resetUpdateState());
   }, [dispatch]);
 
-  // Auto-update trigger: show confirmation dialog when enabled + update available
   useEffect(() => {
-    if (autoUpdateEnabled && updateAvailable && !showConfirmDialogState && !isUpdating) {
-      dispatch(showConfirmDialog(true)); // true = isAutoUpdateTrigger
+    if (
+      autoUpdateEnabled &&
+      updateAvailable &&
+      !showConfirmDialogState &&
+      !isUpdating &&
+      latestVersion &&
+      latestVersion !== dismissedVersion
+    ) {
+      dispatch(showConfirmDialog(true));
     }
-  }, [autoUpdateEnabled, updateAvailable, showConfirmDialogState, isUpdating, dispatch]);
+  }, [
+    autoUpdateEnabled,
+    updateAvailable,
+    showConfirmDialogState,
+    isUpdating,
+    latestVersion,
+    dismissedVersion,
+    dispatch,
+  ]);
 
   return {
     triggerUpdate,
