@@ -22,7 +22,20 @@ interface UseVersionCheckReturn {
 }
 
 const CACHE_KEY = 'terminus_version_check';
-const CACHE_DURATION = 3600000; // 1 hour in milliseconds
+const CACHE_DURATION = 300000; // 5 minutes
+
+async function fetchRuntimeVersion(): Promise<string> {
+  try {
+    const response = await fetch('/api/update/status');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.version) {
+        return data.version;
+      }
+    }
+  } catch {}
+  return APP_VERSION;
+}
 
 export function useVersionCheck(): UseVersionCheckReturn {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -32,7 +45,8 @@ export function useVersionCheck(): UseVersionCheckReturn {
 
   const checkVersion = useCallback(async () => {
     try {
-      // Check localStorage for cached result
+      const currentVersion = await fetchRuntimeVersion();
+
       const cached = localStorage.getItem(CACHE_KEY);
       let release: GitHubRelease | null = null;
 
@@ -42,7 +56,6 @@ export function useVersionCheck(): UseVersionCheckReturn {
           const now = Date.now();
           const cacheAge = now - cachedData.timestamp;
 
-          // Use cache if less than 1 hour old
           if (cacheAge < CACHE_DURATION) {
             release = {
               tag_name: cachedData.version.startsWith('v')
@@ -52,16 +65,12 @@ export function useVersionCheck(): UseVersionCheckReturn {
               name: '',
             };
           }
-        } catch {
-          // Invalid cache, will fetch fresh
-        }
+        } catch {}
       }
 
-      // Fetch from GitHub if no valid cache
       if (!release) {
         release = await fetchLatestRelease();
 
-        // Cache the result if successful
         if (release) {
           const cacheData: CachedVersionCheck = {
             version: release.tag_name.replace(/^v/, ''),
@@ -72,9 +81,8 @@ export function useVersionCheck(): UseVersionCheckReturn {
         }
       }
 
-      // Update state based on fetched/cached release
       if (release) {
-        const isNewer = isNewerVersion(release.tag_name, APP_VERSION);
+        const isNewer = isNewerVersion(release.tag_name, currentVersion);
         setUpdateAvailable(isNewer);
         setLatestVersion(release.tag_name.replace(/^v/, ''));
         setReleaseUrl(release.html_url);
@@ -84,7 +92,6 @@ export function useVersionCheck(): UseVersionCheckReturn {
         setReleaseUrl(null);
       }
     } catch {
-      // Silent failure - no error state
       setUpdateAvailable(false);
       setLatestVersion(null);
       setReleaseUrl(null);
