@@ -19,7 +19,8 @@ dist/
 build/
 out/
 .swc/
-.turbo/cache/
+.turbo/
+next-env.d.ts
 .next/
 
 # AI/Dev tools
