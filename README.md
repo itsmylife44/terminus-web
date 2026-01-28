@@ -22,6 +22,97 @@ Browser (ghostty-web) → Caddy → Next.js (port 3000)
 - **Clipboard**: Native copy/paste support
 - **Multi-Client**: Multiple browser tabs can connect to the same session
 
+### Persistent Sessions
+
+Terminal sessions now persist across browser disconnections using tmux:
+
+- **Cross-device access**: Start a session at home, continue at work
+- **Background execution**: Sessions keep running while browser closed
+- **Session takeover**: Take control of sessions from other devices
+- **Scrollback preservation**: Full terminal history restored on reconnect
+- **Visual indicators**: Red dot shows when session is in use elsewhere
+
+#### Requirements
+
+tmux must be installed on the system:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install tmux
+
+# macOS
+brew install tmux
+
+# CentOS/RHEL
+sudo yum install tmux
+```
+
+#### Configuration
+
+Enable persistent sessions by passing the `--tmux-enabled` flag to terminus-pty:
+
+```bash
+terminus-pty --tmux-enabled --session-timeout 24h --max-inactive 24h --port 3001
+```
+
+#### CLI Flags
+
+- `--tmux-enabled` (default: `false`)
+  - Enables tmux-based persistent sessions
+  - **Must be explicitly enabled** - not enabled by default for safety
+
+- `--session-timeout` (default: `30s`)
+  - How long a session persists after all clients disconnect
+  - Recommended for production: `24h` or longer
+  - Format: Go duration strings (e.g., `30s`, `5m`, `24h`, `7d`)
+
+- `--max-inactive` (default: `24h`)
+  - Auto-cleanup of sessions inactive for this duration
+  - Only applies when `--tmux-enabled` is set
+  - Format: Go duration strings
+
+- `--cleanup-interval-tmux` (default: `1h`, minimum: `10m`)
+  - How often to check for inactive sessions to cleanup
+  - Only applies when `--tmux-enabled` is set
+  - Minimum enforced at 10 minutes to prevent excessive CPU usage
+
+#### Example Usage
+
+**Development (persistent sessions enabled):**
+
+```bash
+terminus-pty --tmux-enabled --session-timeout 2h --port 3001
+```
+
+**Production (long-lived persistent sessions):**
+
+```bash
+terminus-pty --tmux-enabled \
+  --session-timeout 24h \
+  --max-inactive 7d \
+  --cleanup-interval-tmux 1h \
+  --port 3001 \
+  --host 0.0.0.0
+```
+
+#### Testing Persistent Sessions
+
+1. Create a terminal session and run a command
+2. Close the browser tab (or disconnect)
+3. Browse to another device or wait a moment
+4. Reconnect in the same browser or another device
+5. The session will still be running with full scrollback history preserved
+
+You can verify tmux sessions are running:
+
+```bash
+# List all tmux sessions
+tmux list-sessions
+
+# Show details of a specific session
+tmux capture-pane -t pty_SESSION_ID -p -S -100
+```
+
 ## Quick Install (Ubuntu 24.04/22.04)
 
 ```bash
@@ -148,8 +239,22 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
    # Start Next.js
    cd apps/web && npm start
 
-   # Start terminus-pty
-   terminus-pty --port 3001 --host 0.0.0.0 --auth-user admin --auth-pass yourpassword
+   # Start terminus-pty (with persistent sessions enabled)
+   terminus-pty \
+     --port 3001 \
+     --host 0.0.0.0 \
+     --auth-user admin \
+     --auth-pass yourpassword \
+     --tmux-enabled \
+     --session-timeout 24h \
+     --max-inactive 7d \
+     --cleanup-interval-tmux 1h
+   ```
+
+   **Note**: For persistent sessions, ensure `tmux` is installed:
+
+   ```bash
+   sudo apt-get update && sudo apt-get install -y tmux
    ```
 
 ### Caddy Configuration
