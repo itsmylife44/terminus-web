@@ -25,7 +25,12 @@ export function TerminalClient({ tabId, existingPtyId, isActive = true }: Termin
   const [terminal, setTerminal] = useState<TerminalType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { connect } = useTerminalConnection(terminal, { tabId, existingPtyId });
+  const connectRef = useRef(connect);
   const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     if (!terminalRef.current || terminalInstanceRef.current) return;
@@ -84,9 +89,9 @@ export function TerminalClient({ tabId, existingPtyId, isActive = true }: Termin
 
   useEffect(() => {
     if (terminal) {
-      connect();
+      connectRef.current();
     }
-  }, [terminal, connect]);
+  }, [terminal]);
 
   const handleReconnect = () => {
     dispatch(resetReconnectAttempts());

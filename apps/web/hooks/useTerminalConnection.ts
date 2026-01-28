@@ -35,6 +35,9 @@ export function useTerminalConnection(
   const isManuallyClosedRef = useRef(false);
   const ptyIdRef = useRef<string | null>(existingPtyId || null);
   const isReconnectRef = useRef(!!existingPtyId);
+  const terminalRef = useRef<Terminal | null>(null);
+  const connectRef = useRef<(() => Promise<void>) | null>(null);
+  const onDataDisposableRef = useRef<{ dispose: () => void } | null>(null);
 
   const connect = useCallback(async () => {
     if (!terminal) return;
@@ -138,7 +141,11 @@ export function useTerminalConnection(
       };
 
       socket.onmessage = (event) => {
-        terminal.write(event.data);
+        try {
+          terminalRef.current?.write(event.data);
+        } catch (err) {
+          console.error('[PTY] Write error:', err);
+        }
       };
 
       socket.onerror = () => {
@@ -158,7 +165,7 @@ export function useTerminalConnection(
         if (event.code === 1000) {
           dispatch(setExitCode(0));
           dispatch(setConnectionStatus('disconnected'));
-          terminal.writeln('\r\n\x1b[33mSession ended\x1b[0m');
+          terminalRef.current?.writeln('\r\n\x1b[33mSession ended\x1b[0m');
           // Mark session as closed in DB
           dispatch(
             updatePtySession({
@@ -174,9 +181,13 @@ export function useTerminalConnection(
         }
       };
 
-      terminal.onData((data) => {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(data);
+      // Dispose previous listener if any (prevents duplicate listeners on reconnect)
+      onDataDisposableRef.current?.dispose();
+
+      // Set up new listener using socketRef (not the local socket variable)
+      onDataDisposableRef.current = terminal.onData((data) => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(data);
         }
       });
     } catch (err) {
@@ -198,6 +209,16 @@ export function useTerminalConnection(
     }
   }, [terminal, dispatch, tabId]);
 
+  // Sync terminal to ref for fresh reference in socket handlers
+  useEffect(() => {
+    terminalRef.current = terminal;
+  }, [terminal]);
+
+  // Sync connect to ref for fresh reference in reconnect timeout
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
   // Auto-reconnect logic
   useEffect(() => {
     if (connectionStatus === 'reconnecting') {
@@ -208,7 +229,7 @@ export function useTerminalConnection(
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 16000);
 
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        connectRef.current?.();
       }, delay);
 
       return () => {
@@ -244,6 +265,7 @@ export function useTerminalConnection(
   useEffect(() => {
     return () => {
       isManuallyClosedRef.current = true;
+      onDataDisposableRef.current?.dispose();
       if (socketRef.current) socketRef.current.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     };
