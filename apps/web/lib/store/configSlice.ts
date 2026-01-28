@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { openCodeClient, OpenCodeConfig } from '../api/client';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { openCodeClient, type OpenCodeConfig } from '../api/client';
 
 export interface ConfigState {
   config: OpenCodeConfig | null;

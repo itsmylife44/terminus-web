@@ -1,14 +1,15 @@
 'use client';
 
 import './globals.css';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { ReduxProvider } from '@/lib/store/provider';
 import AuthGate from '@/components/layout/AuthGate';
 import { Sidebar } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 

@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { openCodeClient, OpenCodeSession } from '../api/client';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { openCodeClient, type OpenCodeSession } from '../api/client';
 
 export interface SessionsState {
   sessions: OpenCodeSession[];
@@ -46,8 +46,11 @@ export const sessionsSlice = createSlice({
     /**
      * Update a specific session in the array by ID
      */
-    updateSession: (state, action: PayloadAction<{ id: string; updates: Partial<OpenCodeSession> }>) => {
-      const sessionIndex = state.sessions.findIndex(s => s.id === action.payload.id);
+    updateSession: (
+      state,
+      action: PayloadAction<{ id: string; updates: Partial<OpenCodeSession> }>
+    ) => {
+      const sessionIndex = state.sessions.findIndex((s) => s.id === action.payload.id);
       if (sessionIndex !== -1) {
         state.sessions[sessionIndex] = {
           ...state.sessions[sessionIndex],
@@ -79,7 +82,7 @@ export const sessionsSlice = createSlice({
       // Handle fetchSessions failure
       .addCase(fetchSessions.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string || 'Failed to fetch sessions';
+        state.error = (action.payload as string) || 'Failed to fetch sessions';
       });
   },
 });

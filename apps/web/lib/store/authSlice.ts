@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -22,20 +22,23 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.username = action.payload.username;
       state.error = null;
-      
+
       // Store credentials in sessionStorage
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('opencode_auth', JSON.stringify({
-          username: action.payload.username,
-          password: action.payload.password || ''
-        }));
+        sessionStorage.setItem(
+          'opencode_auth',
+          JSON.stringify({
+            username: action.payload.username,
+            password: action.payload.password || '',
+          })
+        );
       }
     },
     logout: (state) => {
       state.isAuthenticated = false;
       state.username = null;
       state.error = null;
-      
+
       // Clear credentials from sessionStorage
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('opencode_auth');
@@ -47,7 +50,7 @@ export const authSlice = createSlice({
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
-    }
+    },
   },
 });
 

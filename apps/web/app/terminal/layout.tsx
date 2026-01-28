@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 
@@ -9,7 +10,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
  * - NO padding around terminal for full-screen experience
  * - Terminal fills remaining space after sidebar
  */
-export default function TerminalLayout({ children }: { children: React.ReactNode }) {
+export default function TerminalLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -40,7 +41,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
       </button>
 
       {/* Terminal content - full height, offset by sidebar on desktop */}
-      <div className="h-screen md:ml-64 bg-[#1a1a1a]">{children}</div>
+      <div className="h-screen md:ml-64 bg-zinc-900">{children}</div>
     </>
   );
 }

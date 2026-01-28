@@ -9,7 +9,8 @@ import {
   getActivePtySessions,
   getAllPtySessions,
   createPtySession,
-  PtySessionStatus,
+  type PtySessionStatus,
+  type PtySession,
 } from '@/lib/db/pty-sessions';
 
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') as PtySessionStatus | null;
     const includeAll = searchParams.get('all') === 'true';
 
-    let sessions;
+    let sessions: PtySession[];
     if (includeAll) {
       sessions = getAllPtySessions(status || undefined);
     } else {

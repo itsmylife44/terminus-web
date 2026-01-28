@@ -79,15 +79,6 @@ export function getPtySession(id: string): PtySession | null {
 }
 
 /**
- * Get a PTY session by its PTY ID (from opencode serve)
- */
-export function getPtySessionByPtyId(ptyId: string): PtySession | null {
-  const db = getDb();
-  const stmt = db.prepare('SELECT * FROM pty_sessions WHERE pty_id = ?');
-  return stmt.get(ptyId) as PtySession | null;
-}
-
-/**
  * Create a new PTY session
  */
 export function createPtySession(input: CreatePtySessionInput): PtySession {
@@ -158,19 +149,6 @@ export function updatePtySession(id: string, input: UpdatePtySessionInput): PtyS
 }
 
 /**
- * Update last_connected_at timestamp
- */
-export function touchPtySession(id: string): void {
-  const db = getDb();
-  const stmt = db.prepare(`
-    UPDATE pty_sessions 
-    SET last_connected_at = datetime('now') 
-    WHERE id = ?
-  `);
-  stmt.run(id);
-}
-
-/**
  * Delete a PTY session
  */
 export function deletePtySession(id: string): boolean {
@@ -178,39 +156,4 @@ export function deletePtySession(id: string): boolean {
   const stmt = db.prepare('DELETE FROM pty_sessions WHERE id = ?');
   const result = stmt.run(id);
   return result.changes > 0;
-}
-
-/**
- * Mark a session as disconnected
- */
-export function disconnectPtySession(id: string): PtySession | null {
-  return updatePtySession(id, { status: 'disconnected' });
-}
-
-/**
- * Mark a session as closed (can be deleted from UI)
- */
-export function closePtySession(id: string): PtySession | null {
-  return updatePtySession(id, { status: 'closed' });
-}
-
-/**
- * Reactivate a session (when reconnecting)
- */
-export function reactivatePtySession(id: string): PtySession | null {
-  return updatePtySession(id, { status: 'active' });
-}
-
-/**
- * Clean up old closed sessions (older than specified days)
- */
-export function cleanupOldSessions(daysOld: number = 7): number {
-  const db = getDb();
-  const stmt = db.prepare(`
-    DELETE FROM pty_sessions 
-    WHERE status = 'closed' 
-    AND datetime(last_connected_at) < datetime('now', '-' || ? || ' days')
-  `);
-  const result = stmt.run(daysOld);
-  return result.changes;
 }

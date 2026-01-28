@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export interface Tab {
   id: string; // Unique tab identifier (same as DB session id for saved sessions)
@@ -121,7 +121,7 @@ export const tabsSlice = createSlice({
   },
 });
 
-export const { addTab, removeTab, setActiveTab, updateTabTitle, updateTabPtyId, setTabConnected } =
+export const { addTab, removeTab, setActiveTab, updateTabPtyId, setTabConnected } =
   tabsSlice.actions;
 
 export default tabsSlice.reducer;

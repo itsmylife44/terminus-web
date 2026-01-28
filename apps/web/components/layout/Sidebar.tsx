@@ -1,5 +1,6 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -99,6 +100,7 @@ const XIcon = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
@@ -191,7 +193,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   // Handle deleting a PTY session
-  const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
+  const handleDeleteSession = (e: MouseEvent, sessionId: string) => {
     e.stopPropagation();
     dispatch(deletePtySession(sessionId));
   };
@@ -250,6 +252,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               return (
                 <button
+                  type="button"
                   key={session.id}
                   onClick={() => handleSessionClick(session)}
                   className={`group w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
@@ -267,6 +270,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                   {session.status === 'closed' && (
                     <button
+                      type="button"
                       onClick={(e) => handleDeleteSession(e, session.id)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-gray-300 transition-all"
                       title="Delete session"

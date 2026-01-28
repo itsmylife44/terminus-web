@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { APP_VERSION } from '@/lib/version/versionChecker';
 
 export type UpdateStage =

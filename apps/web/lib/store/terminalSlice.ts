@@ -1,7 +1,16 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+const CONNECTION_STATUS = {
+  DISCONNECTED: 'disconnected',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  RECONNECTING: 'reconnecting',
+} as const;
+
+export type ConnectionStatus = (typeof CONNECTION_STATUS)[keyof typeof CONNECTION_STATUS];
 
 export interface TerminalState {
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+  connectionStatus: ConnectionStatus;
   lastError: string | null;
   exitCode: number | null;
   reconnectAttempts: number;
@@ -18,10 +27,7 @@ export const terminalSlice = createSlice({
   name: 'terminal',
   initialState,
   reducers: {
-    setConnectionStatus: (
-      state,
-      action: PayloadAction<TerminalState['connectionStatus']>
-    ) => {
+    setConnectionStatus: (state, action: PayloadAction<TerminalState['connectionStatus']>) => {
       state.connectionStatus = action.payload;
     },
     setError: (state, action: PayloadAction<string | null>) => {

@@ -10,7 +10,7 @@ import {
   getPtySession,
   updatePtySession,
   deletePtySession,
-  PtySessionStatus,
+  type PtySessionStatus,
 } from '@/lib/db/pty-sessions';
 
 interface RouteParams {

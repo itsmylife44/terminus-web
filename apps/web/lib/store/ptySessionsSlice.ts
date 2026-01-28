@@ -3,16 +3,16 @@
  * Manages PTY terminal sessions stored in the database
  */
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import {
   fetchPtySessions as apiFetchPtySessions,
   createPtySession as apiCreatePtySession,
   updatePtySession as apiUpdatePtySession,
   deletePtySession as apiDeletePtySession,
-  PtySession,
-  CreatePtySessionInput,
-  UpdatePtySessionInput,
-  PtySessionStatus,
+  type PtySession,
+  type CreatePtySessionInput,
+  type UpdatePtySessionInput,
+  type PtySessionStatus,
 } from '@/lib/api/pty-sessions';
 
 export interface PtySessionsState {
@@ -176,7 +176,7 @@ export const ptySessionsSlice = createSlice({
   },
 });
 
-export const { clearError, setSessionStatus } = ptySessionsSlice.actions;
+export const { clearError } = ptySessionsSlice.actions;
 export default ptySessionsSlice.reducer;
 
 // Re-export types

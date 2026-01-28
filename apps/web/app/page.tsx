@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { openCodeClient, OpenCodeSession } from "@/lib/api/client";
-import { StatsCards } from "@/components/dashboard/StatsCards";
-import { RecentSessions } from "@/components/dashboard/RecentSessions";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { openCodeClient, type OpenCodeSession } from '@/lib/api/client';
+import { StatsCards } from '@/components/dashboard/StatsCards';
+import { RecentSessions } from '@/components/dashboard/RecentSessions';
+import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState<OpenCodeSession[]>([]);
@@ -21,8 +21,8 @@ export default function Dashboard() {
         const recentSessions = await openCodeClient.getSessions(5, 0);
         setSessions(recentSessions);
       } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-        setError("Failed to load dashboard data. Please try again.");
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -33,7 +33,9 @@ export default function Dashboard() {
 
   // Calculate stats (in a real app, this might come from a separate API endpoint)
   const totalSessions = sessions.length; // This is just loaded sessions, strictly we'd need a count endpoint
-  const activeSessions = sessions.filter((s) => s.status === "active" || s.state === "running").length;
+  const activeSessions = sessions.filter(
+    (s) => s.status === 'active' || s.state === 'running'
+  ).length;
 
   if (isLoading) {
     return (
@@ -58,10 +60,7 @@ export default function Dashboard() {
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
       </div>
 
-      <StatsCards 
-        totalSessions={totalSessions} 
-        activeSessions={activeSessions} 
-      />
+      <StatsCards totalSessions={totalSessions} activeSessions={activeSessions} />
 
       <RecentSessions sessions={sessions} />
     </div>

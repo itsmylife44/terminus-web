@@ -1,9 +1,9 @@
-import Link from "next/link";
+import Link from 'next/link';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Terminal } from "lucide-react";
-import { OpenCodeSession } from "@/lib/api/client";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Terminal } from 'lucide-react';
+import type { OpenCodeSession } from '@/lib/api/client';
 
 interface RecentSessionsProps {
   sessions: OpenCodeSession[];
@@ -44,9 +44,9 @@ export function RecentSessions({ sessions }: RecentSessionsProps) {
                       Session {session.id.substring(0, 8)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                       {/* Assuming created_at or similar field might exist, else just show ID */}
-                       {/* This will need adjustment based on actual API response structure */}
-                       ID: {session.id}
+                      {/* Assuming created_at or similar field might exist, else just show ID */}
+                      {/* This will need adjustment based on actual API response structure */}
+                      ID: {session.id}
                     </p>
                   </div>
                 </div>

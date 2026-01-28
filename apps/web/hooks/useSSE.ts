@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/lib/store';
+import type { AppDispatch } from '@/lib/store';
 import { updateSession } from '@/lib/store/sessionsSlice';
-import { OpenCodeSession } from '@/lib/api/client';
+import type { OpenCodeSession } from '@/lib/api/client';
 
 interface SSEEvent {
   type: string;
@@ -43,6 +43,8 @@ export function useSSE() {
     return Math.min(exponentialDelay, maxDelay);
   }, []);
 
+  const needsReconnectRef = useRef(false);
+
   // Handle SSE event from server
   const handleSSEEvent = useCallback(
     (event: Event) => {
@@ -65,8 +67,6 @@ export function useSSE() {
         // Handle session_created event
         if (sseEvent.type === 'session_created' && sseEvent.data) {
           const newSession = sseEvent.data as OpenCodeSession;
-          // Session creation is handled separately - may need to refetch list
-          // or dispatch an add session action if needed
           console.debug('[SSE] Session created:', newSession.id);
         }
 
@@ -86,10 +86,9 @@ export function useSSE() {
           clearTimeout(heartbeatTimeoutRef.current);
         }
         heartbeatTimeoutRef.current = setTimeout(() => {
-          console.warn('[SSE] Heartbeat timeout - reconnecting');
-          closeSSE();
-          connectSSE();
-        }, 35000); // 35s timeout (slightly more than 30s heartbeat)
+          console.warn('[SSE] Heartbeat timeout - will reconnect');
+          needsReconnectRef.current = true;
+        }, 35000);
       } catch (error) {
         console.error('[SSE] Failed to parse event:', error, event);
       }
@@ -172,20 +171,27 @@ export function useSSE() {
     }
   }, [handleSSEEvent, closeSSE, getReconnectDelay]);
 
-  // Initialize on mount and cleanup on unmount
   useEffect(() => {
     connectSSE();
 
-    // Listen for auth errors and disconnect
     const handleAuthError = () => {
       console.debug('[SSE] Auth error detected, closing connection');
       closeSSE();
     };
 
+    const checkReconnect = setInterval(() => {
+      if (needsReconnectRef.current) {
+        needsReconnectRef.current = false;
+        closeSSE();
+        connectSSE();
+      }
+    }, 1000);
+
     window.addEventListener('opencode:auth_error', handleAuthError);
 
     return () => {
       window.removeEventListener('opencode:auth_error', handleAuthError);
+      clearInterval(checkReconnect);
       closeSSE();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);

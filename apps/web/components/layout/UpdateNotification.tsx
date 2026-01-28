@@ -171,6 +171,7 @@ export function UpdateNotification() {
       <div className="relative" ref={dropdownRef}>
         {/* Trigger Button */}
         <button
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="group relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-all duration-200 rounded-md hover:bg-gray-800/50"
         >
@@ -223,6 +224,7 @@ export function UpdateNotification() {
               {/* Update Button */}
               {hasUpdate && !isUpdating && (
                 <button
+                  type="button"
                   onClick={handleUpdateClick}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-md font-medium text-sm transition-all duration-200 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
                 >
@@ -320,23 +322,18 @@ export function UpdateNotification() {
         isAutoUpdate={isAutoUpdateTrigger}
       />
 
-      {/* Inline Styles for Animation */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-          @keyframes slideDown {
-            from {
-              opacity: 0;
-              transform: translateY(-8px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
           }
-        `,
-        }}
-      />
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </>
   );
 }

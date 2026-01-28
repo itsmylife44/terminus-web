@@ -39,18 +39,24 @@ export function UpdateConfirmDialog({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="update-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
       onClick={onCancel}
+      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
     >
       <div
+        role="document"
         className="w-full max-w-md rounded-lg bg-gray-900 p-6 text-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="mb-4 flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-500" />
           <div>
-            <h2 className="text-lg font-semibold">
+            <h2 id="update-dialog-title" className="text-lg font-semibold">
               {isAutoUpdate ? 'Auto-Update Detected' : 'Update Available'}
             </h2>
           </div>

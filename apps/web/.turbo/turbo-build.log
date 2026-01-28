@@ -1,32 +1,37 @@
 
-> @terminus-web/web@0.1.0 build
+> @terminus-web/web@1.1.10 build
 > next build
 
-   ▲ Next.js 15.5.10
+▲ Next.js 16.1.5 (Turbopack)
+- Environments: .env.local
 
-   Creating an optimized production build ...
- ✓ Compiled successfully in 715ms
-   Linting and checking validity of types ...
+  Creating an optimized production build ...
+✓ Compiled successfully in 1684.8ms
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/11) ...
+  Generating static pages using 7 workers (2/11) 
+  Generating static pages using 7 workers (5/11) 
+  Generating static pages using 7 workers (8/11) 
+✓ Generating static pages using 7 workers (11/11) in 111.7ms
+  Finalizing page optimization ...
 
- ⚠ The Next.js plugin was not detected in your ESLint configuration. See https://nextjs.org/docs/app/api-reference/config/eslint#migrating-existing-config
-   Collecting page data ...
-   Generating static pages (0/5) ...
-   Generating static pages (1/5) 
-   Generating static pages (2/5) 
-   Generating static pages (3/5) 
- ✓ Generating static pages (5/5)
-   Finalizing page optimization ...
-   Collecting build traces ...
-
-Route (app)                                 Size  First Load JS
-┌ ○ /                                    3.43 kB         106 kB
-├ ○ /_not-found                            991 B         103 kB
-└ ○ /terminal                             103 kB         213 kB
-+ First Load JS shared by all             102 kB
-  ├ chunks/18-56dddf0e84b4cdcc.js        46.1 kB
-  ├ chunks/87c73c54-24122e7b92478d00.js  54.2 kB
-  └ other shared chunks (total)          1.89 kB
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/opencode/[...path]
+├ ƒ /api/pty-sessions
+├ ƒ /api/pty-sessions/[id]
+├ ƒ /api/update
+├ ƒ /api/update/status
+├ ○ /login
+├ ○ /sessions
+├ ƒ /sessions/[id]
+├ ○ /settings
+├ ○ /settings/providers
+└ ○ /terminal
 
 
-○  (Static)  prerendered as static content
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 

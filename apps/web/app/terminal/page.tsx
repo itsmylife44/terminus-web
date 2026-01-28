@@ -20,7 +20,7 @@ export default function TerminalPage() {
   }, [tabs.length, dispatch]);
 
   return (
-    <main className="flex h-full w-full flex-col bg-[#1a1a1a] overflow-hidden">
+    <main className="flex h-full w-full flex-col bg-zinc-900 overflow-hidden">
       <TerminalHeader />
       <TerminalTabs />
       <div className="flex-1 overflow-hidden relative">

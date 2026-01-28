@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Clock, User, MessageSquare, CheckCircle2 } from "lucide-react";
-import { openCodeClient, OpenCodeSessionDetail, OpenCodeTodo } from "@/lib/api/client";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { Loader2, ArrowLeft, Clock, User, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { openCodeClient, type OpenCodeSessionDetail, type OpenCodeTodo } from '@/lib/api/client';
+import { Button } from '@/components/ui/button';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -30,8 +30,8 @@ export default function SessionDetailPage() {
         setSession(sessionData);
         setTodos(todosData);
       } catch (err) {
-        console.error("Failed to fetch session details:", err);
-        setError("Failed to load session details. Please try again.");
+        console.error('Failed to fetch session details:', err);
+        setError('Failed to load session details. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -54,11 +54,11 @@ export default function SessionDetailPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center space-y-6">
         <div className="text-center space-y-2">
-          <p className="text-2xl font-bold text-red-400">{error || "Session not found"}</p>
+          <p className="text-2xl font-bold text-red-400">{error || 'Session not found'}</p>
           <p className="text-gray-500">The session may have been deleted or is inaccessible</p>
         </div>
-        <Button 
-          onClick={() => router.push("/sessions")}
+        <Button
+          onClick={() => router.push('/sessions')}
           variant="outline"
           className="border-cyan-500/30 hover:border-cyan-500 hover:bg-cyan-500/10"
         >
@@ -69,10 +69,10 @@ export default function SessionDetailPage() {
     );
   }
 
-  const statusColor = 
-    session.status === "active" || session.state === "running" 
-      ? "text-green-400 bg-green-400/10 border-green-400/30" 
-      : "text-gray-400 bg-gray-400/10 border-gray-400/30";
+  const statusColor =
+    session.status === 'active' || session.state === 'running'
+      ? 'text-green-400 bg-green-400/10 border-green-400/30'
+      : 'text-gray-400 bg-gray-400/10 border-gray-400/30';
 
   const messages = session.messages || [];
   const hasTodos = todos.length > 0;
@@ -80,10 +80,10 @@ export default function SessionDetailPage() {
   return (
     <div className="min-h-full space-y-8 relative">
       <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 pointer-events-none" />
-      
+
       <div className="relative">
         <Button
-          onClick={() => router.push("/sessions")}
+          onClick={() => router.push('/sessions')}
           variant="ghost"
           className="mb-6 text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
         >
@@ -97,12 +97,12 @@ export default function SessionDetailPage() {
               <h1 className="text-4xl font-black tracking-tighter mb-3 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
                 Session Details
               </h1>
-              <p className="text-gray-500 font-mono text-sm tracking-wider">
-                {sessionId}
-              </p>
+              <p className="text-gray-500 font-mono text-sm tracking-wider">{sessionId}</p>
             </div>
-            <span className={`px-5 py-2 rounded-full text-sm font-bold border ${statusColor} uppercase tracking-wider`}>
-              {session.status || session.state || "unknown"}
+            <span
+              className={`px-5 py-2 rounded-full text-sm font-bold border ${statusColor} uppercase tracking-wider`}
+            >
+              {session.status || session.state || 'unknown'}
             </span>
           </div>
 
@@ -112,7 +112,9 @@ export default function SessionDetailPage() {
                 <Clock className="h-8 w-8 text-cyan-400" />
                 <div>
                   <p className="text-xs uppercase tracking-widest text-gray-500 mb-1">Created</p>
-                  <p className="text-base font-bold text-gray-200">{new Date(session.created).toLocaleString()}</p>
+                  <p className="text-base font-bold text-gray-200">
+                    {new Date(session.created).toLocaleString()}
+                  </p>
                 </div>
               </div>
             )}
@@ -149,18 +151,40 @@ export default function SessionDetailPage() {
           <div className="space-y-3">
             {todos.map((todo) => {
               const statusConfigMap = {
-                completed: { bg: "bg-green-500/20", border: "border-green-500/30", text: "text-green-400", icon: "✓" },
-                in_progress: { bg: "bg-cyan-500/20", border: "border-cyan-500/30", text: "text-cyan-400", icon: "→" },
-                pending: { bg: "bg-gray-500/20", border: "border-gray-500/30", text: "text-gray-400", icon: "○" },
-                cancelled: { bg: "bg-red-500/20", border: "border-red-500/30", text: "text-red-400", icon: "✗" },
+                completed: {
+                  bg: 'bg-green-500/20',
+                  border: 'border-green-500/30',
+                  text: 'text-green-400',
+                  icon: '✓',
+                },
+                in_progress: {
+                  bg: 'bg-cyan-500/20',
+                  border: 'border-cyan-500/30',
+                  text: 'text-cyan-400',
+                  icon: '→',
+                },
+                pending: {
+                  bg: 'bg-gray-500/20',
+                  border: 'border-gray-500/30',
+                  text: 'text-gray-400',
+                  icon: '○',
+                },
+                cancelled: {
+                  bg: 'bg-red-500/20',
+                  border: 'border-red-500/30',
+                  text: 'text-red-400',
+                  icon: '✗',
+                },
               };
-              const statusConfig = statusConfigMap[todo.status as keyof typeof statusConfigMap] || statusConfigMap.pending;
+              const statusConfig =
+                statusConfigMap[todo.status as keyof typeof statusConfigMap] ||
+                statusConfigMap.pending;
 
               const priorityConfig = {
-                high: "text-red-400",
-                medium: "text-yellow-400",
-                low: "text-blue-400",
-              }[todo.priority || "medium"];
+                high: 'text-red-400',
+                medium: 'text-yellow-400',
+                low: 'text-blue-400',
+              }[todo.priority || 'medium'];
 
               return (
                 <div
@@ -178,7 +202,9 @@ export default function SessionDetailPage() {
                     </div>
                   </div>
                   {todo.priority && (
-                    <span className={`text-xs font-bold uppercase tracking-widest ${priorityConfig} ml-4`}>
+                    <span
+                      className={`text-xs font-bold uppercase tracking-widest ${priorityConfig} ml-4`}
+                    >
                       {todo.priority}
                     </span>
                   )}
@@ -199,14 +225,29 @@ export default function SessionDetailPage() {
           </h2>
           <div className="space-y-4 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-2">
             {messages.map((message, index) => {
-              const isUser = message.role === "user";
-              const isSystem = message.role === "system";
-              
-              const roleConfig = isUser 
-                ? { bg: "bg-cyan-500/10", border: "border-cyan-500/30", text: "text-cyan-400", label: "User" }
+              const isUser = message.role === 'user';
+              const isSystem = message.role === 'system';
+
+              const roleConfig = isUser
+                ? {
+                    bg: 'bg-cyan-500/10',
+                    border: 'border-cyan-500/30',
+                    text: 'text-cyan-400',
+                    label: 'User',
+                  }
                 : isSystem
-                ? { bg: "bg-yellow-500/10", border: "border-yellow-500/30", text: "text-yellow-400", label: "System" }
-                : { bg: "bg-purple-500/10", border: "border-purple-500/30", text: "text-purple-400", label: "Assistant" };
+                  ? {
+                      bg: 'bg-yellow-500/10',
+                      border: 'border-yellow-500/30',
+                      text: 'text-yellow-400',
+                      label: 'System',
+                    }
+                  : {
+                      bg: 'bg-purple-500/10',
+                      border: 'border-purple-500/30',
+                      text: 'text-purple-400',
+                      label: 'Assistant',
+                    };
 
               return (
                 <div
@@ -214,7 +255,9 @@ export default function SessionDetailPage() {
                   className={`p-6 rounded-xl border ${roleConfig.border} ${roleConfig.bg} transition-all hover:shadow-lg`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className={`text-xs font-black uppercase tracking-widest ${roleConfig.text}`}>
+                    <span
+                      className={`text-xs font-black uppercase tracking-widest ${roleConfig.text}`}
+                    >
                       {roleConfig.label}
                     </span>
                     {message.timestamp && (

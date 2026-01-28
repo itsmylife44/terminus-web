@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Terminal as TerminalType, FitAddon as FitAddonType } from 'ghostty-web';
 import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { DisconnectedOverlay } from './DisconnectedOverlay';
@@ -88,17 +88,17 @@ export function TerminalClient({ tabId, existingPtyId, isActive = true }: Termin
     }
   }, [terminal, connect]);
 
-  const handleReconnect = useCallback(() => {
+  const handleReconnect = () => {
     dispatch(resetReconnectAttempts());
     dispatch(setConnectionStatus('connecting'));
     connect();
-  }, [connect, dispatch]);
+  };
 
-  const handleNewSession = useCallback(() => {
+  const handleNewSession = () => {
     dispatch(setExitCode(null));
     dispatch(setConnectionStatus('connecting'));
     connect();
-  }, [connect, dispatch]);
+  };
 
   return (
     <div className="relative w-full h-full bg-black">

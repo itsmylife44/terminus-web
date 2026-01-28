@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { OpenCodeProvider } from '@/lib/api/client';
+import type { OpenCodeProvider } from '@/lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,56 +13,60 @@ interface ProviderListProps {
   onOAuthInitiate: (providerId: string) => Promise<void>;
 }
 
-export function ProviderList({ 
-  providers, 
-  onSaveApiKey, 
-  onRemoveAuth, 
-  onOAuthInitiate 
+export function ProviderList({
+  providers,
+  onSaveApiKey,
+  onRemoveAuth,
+  onOAuthInitiate,
 }: ProviderListProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
   const handleApiKeyChange = (providerId: string, value: string) => {
-    setApiKeys(prev => ({ ...prev, [providerId]: value }));
+    setApiKeys((prev) => ({ ...prev, [providerId]: value }));
   };
 
   const handleSaveApiKey = async (providerId: string) => {
     const apiKey = apiKeys[providerId]?.trim();
     if (!apiKey) return;
 
-    setLoading(prev => ({ ...prev, [providerId]: true }));
+    setLoading((prev) => ({ ...prev, [providerId]: true }));
     try {
       await onSaveApiKey(providerId, apiKey);
-      setApiKeys(prev => ({ ...prev, [providerId]: '' }));
+      setApiKeys((prev) => ({ ...prev, [providerId]: '' }));
     } finally {
-      setLoading(prev => ({ ...prev, [providerId]: false }));
+      setLoading((prev) => ({ ...prev, [providerId]: false }));
     }
   };
 
   const handleRemoveAuth = async (providerId: string) => {
-    setLoading(prev => ({ ...prev, [providerId]: true }));
+    setLoading((prev) => ({ ...prev, [providerId]: true }));
     try {
       await onRemoveAuth(providerId);
     } finally {
-      setLoading(prev => ({ ...prev, [providerId]: false }));
+      setLoading((prev) => ({ ...prev, [providerId]: false }));
     }
   };
 
   const handleOAuth = async (providerId: string) => {
-    setLoading(prev => ({ ...prev, [providerId]: true }));
+    setLoading((prev) => ({ ...prev, [providerId]: true }));
     try {
       await onOAuthInitiate(providerId);
     } finally {
-      setLoading(prev => ({ ...prev, [providerId]: false }));
+      setLoading((prev) => ({ ...prev, [providerId]: false }));
     }
   };
 
   return (
     <div className="space-y-4">
       {providers.map((provider) => (
-        <Card key={provider.id} className="border-l-4" style={{
-          borderLeftColor: provider.isConnected ? 'hsl(142 76% 36%)' : 'hsl(var(--border))'
-        }}>
+        <Card
+          key={provider.id}
+          className="border-l-4"
+          style={{
+            borderLeftColor: provider.isConnected ? 'hsl(142 76% 36%)' : 'hsl(var(--border))',
+          }}
+        >
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -90,9 +94,12 @@ export function ProviderList({
           {!provider.isConnected && (
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">API Key</label>
+                <label htmlFor={`api-key-${provider.id}`} className="text-sm font-medium">
+                  API Key
+                </label>
                 <div className="flex gap-2">
                   <Input
+                    id={`api-key-${provider.id}`}
                     type="password"
                     placeholder="Enter API key"
                     value={apiKeys[provider.id] || ''}
@@ -114,9 +121,7 @@ export function ProviderList({
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        Or
-                      </span>
+                      <span className="bg-background px-2 text-muted-foreground">Or</span>
                     </div>
                   </div>
                   <Button

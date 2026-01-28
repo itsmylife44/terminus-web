@@ -1,12 +1,15 @@
 'use client';
 
+import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { fetchConfig, saveConfig } from '@/lib/store/configSlice';
 import { toggleAutoUpdate, showConfirmDialog } from '@/lib/store/updateSlice';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Check, AlertCircle, Settings2, RefreshCw, Download } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Loader2, Save, Check, AlertCircle, RefreshCw, Download } from 'lucide-react';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { APP_VERSION } from '@/lib/version/versionChecker';
 
@@ -51,7 +54,7 @@ export default function SettingsPage() {
     }
   }, [config]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setShowSuccess(false);
 
@@ -69,11 +72,9 @@ export default function SettingsPage() {
 
   const handleCheckForUpdates = async () => {
     setIsCheckingVersion(true);
-    // Force a fresh version check by clearing cache
     if (typeof window !== 'undefined') {
       localStorage.removeItem('terminus_version_check');
     }
-    // Re-trigger the version check
     await new Promise((resolve) => setTimeout(resolve, 500));
     setIsCheckingVersion(false);
   };
@@ -82,246 +83,174 @@ export default function SettingsPage() {
     dispatch(showConfirmDialog(false));
   };
 
-  const currentDisplayVersion = updateAvailable ? latestVersion : APP_VERSION;
   const displayUpdateAvailable = updateAvailable || hookUpdateAvailable;
   const displayLatestVersion = latestVersion || hookLatestVersion;
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-8">
-      {/* Hero Header */}
-      <div className="mb-12 border-l-4 border-blue-500 pl-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Settings2 className="h-8 w-8 text-blue-500" />
-          <h1 className="text-5xl font-black tracking-tight text-white uppercase">System Config</h1>
+    <div className="flex-1 space-y-6 p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+          <p className="text-muted-foreground mt-1">Manage your OpenCode configuration</p>
         </div>
-        <p className="text-gray-400 text-lg font-mono">Modify core OpenCode parameters</p>
       </div>
 
-      {/* Main Form Container */}
-      <div className="max-w-4xl">
-        <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 shadow-2xl">
-          <form onSubmit={handleSubmit}>
-            {/* Form Grid */}
-            <div className="p-8 space-y-8">
-              {/* Model Selection */}
-              <div className="group">
-                <label className="block mb-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500 group-hover:text-blue-400 transition-colors">
-                    Model Selection
-                  </span>
-                  <span className="block text-sm text-gray-600 mt-1 font-mono">
-                    Provider and model configuration
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.model}
-                  onChange={(e) => handleChange('model', e.target.value)}
-                  placeholder="e.g., anthropic/claude-3-5-sonnet"
-                  className="w-full bg-gray-950 border-2 border-gray-800 text-white px-5 py-4 text-lg font-mono
-                    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none
-                    transition-all duration-200 hover:border-gray-700"
-                />
-              </div>
-
-              {/* Theme Selection */}
-              <div className="group">
-                <label className="block mb-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500 group-hover:text-blue-400 transition-colors">
-                    Theme
-                  </span>
-                  <span className="block text-sm text-gray-600 mt-1 font-mono">
-                    Visual appearance mode
-                  </span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['dark', 'light', 'auto'].map((theme) => (
-                    <button
-                      key={theme}
-                      type="button"
-                      onClick={() => handleChange('theme', theme)}
-                      className={`
-                        px-6 py-4 font-bold uppercase tracking-wider text-sm
-                        border-2 transition-all duration-200
-                        ${
-                          formData.theme === theme
-                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50'
-                            : 'bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300'
-                        }
-                      `}
-                    >
-                      {theme}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Log Level Selection */}
-              <div className="group">
-                <label className="block mb-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500 group-hover:text-blue-400 transition-colors">
-                    Log Level
-                  </span>
-                  <span className="block text-sm text-gray-600 mt-1 font-mono">
-                    Diagnostic output verbosity
-                  </span>
-                </label>
-                <div className="grid grid-cols-4 gap-3">
-                  {['debug', 'info', 'warn', 'error'].map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => handleChange('logLevel', level)}
-                      className={`
-                        px-6 py-4 font-bold uppercase tracking-wider text-sm
-                        border-2 transition-all duration-200
-                        ${
-                          formData.logLevel === level
-                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/50'
-                            : 'bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300'
-                        }
-                      `}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>System Configuration</CardTitle>
+          <CardDescription>Modify core OpenCode parameters</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="model" className="text-sm font-medium">
+                Model Selection
+              </label>
+              <Input
+                id="model"
+                type="text"
+                value={formData.model}
+                onChange={(e) => handleChange('model', e.target.value)}
+                placeholder="e.g., anthropic/claude-3-5-sonnet"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">Provider and model configuration</p>
             </div>
 
-            {/* Footer Actions */}
-            <div className="border-t-2 border-gray-800 bg-gray-950/80 p-6 flex items-center justify-between">
-              {/* Status Messages */}
-              <div className="flex-1">
-                {error && (
-                  <div className="flex items-center gap-2 text-red-400 font-mono text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{error}</span>
-                  </div>
-                )}
-                {showSuccess && (
-                  <div className="flex items-center gap-2 text-green-400 font-mono text-sm animate-in fade-in duration-300">
-                    <Check className="h-4 w-4" />
-                    <span>Configuration saved successfully</span>
-                  </div>
-                )}
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Theme</legend>
+              <div className="flex gap-2">
+                {['dark', 'light', 'auto'].map((theme) => (
+                  <Button
+                    key={theme}
+                    type="button"
+                    variant={formData.theme === theme ? 'default' : 'outline'}
+                    onClick={() => handleChange('theme', theme)}
+                    className="capitalize"
+                  >
+                    {theme}
+                  </Button>
+                ))}
               </div>
+              <p className="text-xs text-muted-foreground">Visual appearance mode</p>
+            </fieldset>
 
-              {/* Save Button */}
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold uppercase tracking-wider px-8 py-6 text-base
-                  border-2 border-blue-400 shadow-lg shadow-blue-500/30
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-200"
-              >
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Log Level</legend>
+              <div className="flex gap-2">
+                {['debug', 'info', 'warn', 'error'].map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    variant={formData.logLevel === level ? 'default' : 'outline'}
+                    onClick={() => handleChange('logLevel', level)}
+                    className="capitalize"
+                  >
+                    {level}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Diagnostic output verbosity</p>
+            </fieldset>
+
+            {error && (
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            )}
+            {showSuccess && (
+              <div className="flex items-center gap-2 text-green-500 text-sm">
+                <Check className="h-4 w-4" />
+                <span>Configuration saved successfully</span>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4 border-t">
+              <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="h-5 w-5" />
+                    <Save className="h-4 w-4 mr-2" />
                     Save Configuration
                   </>
                 )}
               </Button>
             </div>
           </form>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Technical Info Footer */}
-        <div className="mt-6 p-4 bg-gray-900/30 border border-gray-800/50 font-mono text-xs text-gray-600">
-          <div className="flex justify-between items-center">
-            <span>CONFIG_PATH: ~/.opencode/config.json</span>
-            {config?.version && <span className="text-blue-500">VERSION: {config.version}</span>}
-          </div>
-        </div>
-
-        {/* Updates Section */}
-        <div className="mt-8 bg-gray-900/50 backdrop-blur-sm border border-gray-800 shadow-2xl">
-          <div className="p-6 border-b-2 border-gray-800">
-            <div className="flex items-center gap-3">
-              <RefreshCw className="h-6 w-6 text-blue-500" />
-              <h2 className="text-2xl font-bold text-white uppercase tracking-wide">Updates</h2>
-            </div>
-            <p className="text-gray-400 text-sm mt-1 font-mono">Software update configuration</p>
-          </div>
-
-          <div className="p-6 space-y-6">
-            {/* Current Version */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                  Current Version
-                </span>
-                <p className="text-xl font-mono text-white mt-1">v{APP_VERSION}</p>
-              </div>
-              {displayUpdateAvailable && (
-                <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-sm font-semibold">
-                  v{displayLatestVersion} Available
-                </span>
-              )}
-            </div>
-
-            {/* Auto-Update Toggle */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                  Auto-Update
-                </span>
-                <p className="text-sm text-gray-600 mt-1 font-mono">
-                  Automatically update when new version is available
-                </p>
-              </div>
-              <Switch
-                checked={autoUpdateEnabled}
-                onCheckedChange={() => dispatch(toggleAutoUpdate())}
-              />
-            </div>
-
-            {/* Check for Updates Button */}
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-800">
-              <Button
-                onClick={handleCheckForUpdates}
-                disabled={isCheckingVersion || versionLoading}
-                variant="outline"
-                className="bg-gray-950 border-2 border-gray-800 text-gray-300 hover:border-gray-700 hover:text-white
-                  font-bold uppercase tracking-wider px-6 py-4 text-sm
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-200"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isCheckingVersion || versionLoading ? 'animate-spin' : ''}`}
-                />
-                Check for Updates
-              </Button>
-
-              {displayUpdateAvailable && (
-                <Button
-                  onClick={handleUpdateClick}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold uppercase tracking-wider px-6 py-4 text-sm
-                    border-2 border-blue-400 shadow-lg shadow-blue-500/30
-                    transition-all duration-200"
-                >
-                  <Download className="h-4 w-4" />
-                  Update Now
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="text-xs text-muted-foreground font-mono px-1">
+        CONFIG_PATH: ~/.opencode/config.json
+        {config?.version && <span className="ml-4">VERSION: {config.version}</span>}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Updates</CardTitle>
+          <CardDescription>Software update configuration</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Current Version</p>
+              <p className="text-2xl font-mono mt-1">v{APP_VERSION}</p>
+            </div>
+            {displayUpdateAvailable && (
+              <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-sm font-medium">
+                v{displayLatestVersion} Available
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div>
+              <p className="text-sm font-medium">Auto-Update</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Automatically update when new version is available
+              </p>
+            </div>
+            <Switch
+              checked={autoUpdateEnabled}
+              onCheckedChange={() => dispatch(toggleAutoUpdate())}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-4 border-t">
+            <Button
+              type="button"
+              onClick={handleCheckForUpdates}
+              disabled={isCheckingVersion || versionLoading}
+              variant="outline"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isCheckingVersion || versionLoading ? 'animate-spin' : ''}`}
+              />
+              Check for Updates
+            </Button>
+
+            {displayUpdateAvailable && (
+              <Button type="button" onClick={handleUpdateClick}>
+                <Download className="h-4 w-4 mr-2" />
+                Update Now
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

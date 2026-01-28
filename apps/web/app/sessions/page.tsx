@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Loader2, Terminal, ChevronLeft, ChevronRight } from "lucide-react";
-import { openCodeClient, OpenCodeSession } from "@/lib/api/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Loader2, Terminal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { openCodeClient, type OpenCodeSession } from '@/lib/api/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const SESSIONS_PER_PAGE = 20;
 
@@ -15,22 +15,30 @@ const SESSIONS_PER_PAGE = 20;
  */
 function StatusBadge({ session }: { session: OpenCodeSession }) {
   // Check various possible status fields
-  const status = (session.status || session.state || "unknown") as string;
-  
+  const status = (session.status || session.state || 'unknown') as string;
+
   const statusConfig: Record<string, { label: string; className: string }> = {
-    active: { label: "Active", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-    running: { label: "Running", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-    completed: { label: "Completed", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-    failed: { label: "Failed", className: "bg-red-500/10 text-red-400 border-red-500/20" },
-    error: { label: "Error", className: "bg-red-500/10 text-red-400 border-red-500/20" },
-    paused: { label: "Paused", className: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-    unknown: { label: "Unknown", className: "bg-gray-500/10 text-gray-400 border-gray-500/20" },
+    active: {
+      label: 'Active',
+      className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    },
+    running: {
+      label: 'Running',
+      className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    },
+    completed: { label: 'Completed', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    failed: { label: 'Failed', className: 'bg-red-500/10 text-red-400 border-red-500/20' },
+    error: { label: 'Error', className: 'bg-red-500/10 text-red-400 border-red-500/20' },
+    paused: { label: 'Paused', className: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    unknown: { label: 'Unknown', className: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
   };
 
   const config = statusConfig[status.toLowerCase()] || statusConfig.unknown;
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}
+    >
       {config.label}
     </span>
   );
@@ -40,21 +48,21 @@ function StatusBadge({ session }: { session: OpenCodeSession }) {
  * Format timestamp to readable format
  */
 function formatTimestamp(timestamp: unknown): string {
-  if (!timestamp) return "—";
-  
+  if (!timestamp) return '—';
+
   try {
     const date = new Date(timestamp as string | number);
-    if (isNaN(date.getTime())) return "—";
-    
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    if (isNaN(date.getTime())) return '—';
+
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(date);
   } catch {
-    return "—";
+    return '—';
   }
 }
 
@@ -85,10 +93,10 @@ export default function SessionsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const offset = (currentPage - 1) * SESSIONS_PER_PAGE;
         const fetchedSessions = await openCodeClient.getSessions(SESSIONS_PER_PAGE, offset);
-        
+
         setSessions(fetchedSessions);
         // Note: API doesn't return total count yet, so we estimate based on results
         // If we get fewer than SESSIONS_PER_PAGE, we're on the last page
@@ -99,8 +107,8 @@ export default function SessionsPage() {
           setTotalSessions((currentPage + 1) * SESSIONS_PER_PAGE);
         }
       } catch (err) {
-        console.error("Failed to fetch sessions:", err);
-        setError("Failed to load sessions. Please try again.");
+        console.error('Failed to fetch sessions:', err);
+        setError('Failed to load sessions. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -135,9 +143,7 @@ export default function SessionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Sessions</h2>
-          <p className="text-muted-foreground mt-1">
-            View and manage all OpenCode sessions
-          </p>
+          <p className="text-muted-foreground mt-1">View and manage all OpenCode sessions</p>
         </div>
       </div>
 
@@ -173,12 +179,8 @@ export default function SessionsPage() {
                       <Terminal className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="font-mono text-sm font-medium">
-                        {truncateId(session.id)}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {session.id}
-                      </p>
+                      <p className="font-mono text-sm font-medium">{truncateId(session.id)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{session.id}</p>
                     </div>
                   </div>
 

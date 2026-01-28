@@ -1,11 +1,12 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { login } from '@/lib/store/authSlice';
 
-export default function AuthGate({ children }: { children: React.ReactNode }) {
+export default function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();

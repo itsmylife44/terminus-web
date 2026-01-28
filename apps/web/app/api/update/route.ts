@@ -5,15 +5,18 @@ import { getUpdateStatus, setUpdateStatus } from './updateState';
 
 const execAsync = promisify(exec);
 
-type UpdateStage =
-  | 'preparing'
-  | 'pulling'
-  | 'installing'
-  | 'building'
-  | 'restarting'
-  | 'complete'
-  | 'error'
-  | 'rolling_back';
+const UPDATE_STAGE = {
+  PREPARING: 'preparing',
+  PULLING: 'pulling',
+  INSTALLING: 'installing',
+  BUILDING: 'building',
+  RESTARTING: 'restarting',
+  COMPLETE: 'complete',
+  ERROR: 'error',
+  ROLLING_BACK: 'rolling_back',
+} as const;
+
+type UpdateStage = (typeof UPDATE_STAGE)[keyof typeof UPDATE_STAGE];
 
 interface UpdateEvent {
   stage: UpdateStage;

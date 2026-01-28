@@ -1,5 +1,6 @@
 'use client';
 
+import type { FormEvent } from 'react';
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch } from '@/lib/store/hooks';
@@ -15,7 +16,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -31,10 +32,13 @@ export default function LoginPage() {
 
     try {
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('opencode_auth', JSON.stringify({
-          username,
-          password
-        }));
+        sessionStorage.setItem(
+          'opencode_auth',
+          JSON.stringify({
+            username,
+            password,
+          })
+        );
       }
 
       const isHealthy = await openCodeClient.health();
@@ -65,18 +69,13 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-2">Login</h1>
-          <p className="text-muted-foreground">
-            Enter your credentials to access Terminus
-          </p>
+          <p className="text-muted-foreground">Enter your credentials to access Terminus</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
-              <label 
-                htmlFor="username" 
-                className="block text-sm font-medium leading-6 mb-1"
-              >
+              <label htmlFor="username" className="block text-sm font-medium leading-6 mb-1">
                 Username
               </label>
               <input
@@ -92,10 +91,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label 
-                htmlFor="password" 
-                className="block text-sm font-medium leading-6 mb-1"
-              >
+              <label htmlFor="password" className="block text-sm font-medium leading-6 mb-1">
                 Password
               </label>
               <input
@@ -110,18 +106,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
-            </div>
-          )}
+          {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
           <div>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full"
-            >
+            <Button type="submit" disabled={isLoading} className="w-full">
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </div>

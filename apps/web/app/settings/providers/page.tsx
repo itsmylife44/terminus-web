@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { openCodeClient, OpenCodeProvider } from '@/lib/api/client';
+import { useEffect, useState, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
+import { openCodeClient, type OpenCodeProvider } from '@/lib/api/client';
 import { ProviderList } from '@/components/settings/ProviderList';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<OpenCodeProvider[]>([]);
@@ -10,11 +12,7 @@ export default function ProvidersPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadProviders();
-  }, []);
-
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -25,7 +23,11 @@ export default function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
   const handleSaveApiKey = async (providerId: string, apiKey: string) => {
     setError(null);
@@ -65,54 +67,57 @@ export default function ProvidersPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-3">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-muted-foreground">Loading providers...</p>
-          </div>
-        </div>
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-6 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Provider Configuration
-        </h1>
-        <p className="text-muted-foreground">
-          Manage API keys and authentication for AI providers
-        </p>
+    <div className="flex-1 space-y-6 p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Provider Configuration</h2>
+          <p className="text-muted-foreground mt-1">
+            Manage API keys and authentication for AI providers
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
           <p className="font-medium">Error</p>
           <p className="text-sm">{error}</p>
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+        <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
           <p className="font-medium">Success</p>
           <p className="text-sm">{successMessage}</p>
         </div>
       )}
 
-      {providers.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">No providers available</p>
-        </div>
-      ) : (
-        <ProviderList
-          providers={providers}
-          onSaveApiKey={handleSaveApiKey}
-          onRemoveAuth={handleRemoveAuth}
-          onOAuthInitiate={handleOAuthInitiate}
-        />
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>AI Providers</CardTitle>
+          <CardDescription>Configure authentication for each provider</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {providers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>No providers available</p>
+            </div>
+          ) : (
+            <ProviderList
+              providers={providers}
+              onSaveApiKey={handleSaveApiKey}
+              onRemoveAuth={handleRemoveAuth}
+              onOAuthInitiate={handleOAuthInitiate}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
