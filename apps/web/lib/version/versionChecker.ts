@@ -1,4 +1,3 @@
-// Read version from package.json - no more hardcoding!
 import packageJson from '../../package.json';
 
 export const APP_VERSION = packageJson.version;
@@ -25,8 +24,26 @@ export async function fetchLatestRelease(): Promise<GitHubRelease | null> {
   }
 }
 
+/**
+ * Compare semantic versions properly (not string comparison).
+ * Returns true if latest is newer than current.
+ */
 export function isNewerVersion(latest: string, current: string): boolean {
-  const latestClean = latest.replace(/^v/, '');
-  const currentClean = current.replace(/^v/, '');
-  return latestClean > currentClean;
+  const parseVersion = (v: string): number[] =>
+    v
+      .replace(/^v/, '')
+      .split('.')
+      .map((n) => parseInt(n, 10) || 0);
+
+  const latestParts = parseVersion(latest);
+  const currentParts = parseVersion(current);
+
+  const maxLength = Math.max(latestParts.length, currentParts.length);
+  for (let i = 0; i < maxLength; i++) {
+    const latestPart = latestParts[i] || 0;
+    const currentPart = currentParts[i] || 0;
+    if (latestPart > currentPart) return true;
+    if (latestPart < currentPart) return false;
+  }
+  return false;
 }

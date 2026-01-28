@@ -1,7 +1,8 @@
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getUpdateStatus, setUpdateStatus } from './updateState';
+import { readFreshVersion } from '@/lib/version/versionChecker.server';
 
 const execAsync = promisify(exec);
 
@@ -76,10 +77,9 @@ export async function POST(request: NextRequest) {
 
       // Stash local changes
       try {
-        await execWithTimeout('git stash', projectRoot);
-        stashApplied = true;
+        const { stdout } = await execWithTimeout('git stash', projectRoot);
+        stashApplied = !stdout.includes('No local changes');
       } catch {
-        // Stash might fail if there are no changes, which is fine
         stashApplied = false;
       }
 
@@ -118,32 +118,26 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'building', progress: 85, message: 'Build complete' });
 
-      // Stage: Restarting
-      await sendEvent({ stage: 'restarting', progress: 90, message: 'Restarting services...' });
+      // Get new version BEFORE restart (reads directly from file, bypassing module cache)
+      const newVersion = readFreshVersion();
 
-      try {
-        await execWithTimeout('pm2 restart ecosystem.config.js', projectRoot);
-      } catch {
-        throw new Error('Failed to restart PM2 services');
-      }
-
-      // Get new version after update
-      let newVersion = 'unknown';
-      try {
-        // Re-import to get updated version (dynamic import)
-        const versionModule = await import('@/lib/version/versionChecker');
-        newVersion = versionModule.APP_VERSION;
-      } catch {
-        // Version fetch failed, use unknown
-      }
-
-      // Stage: Complete
+      // Send complete event BEFORE pm2 restart
+      // This ensures frontend receives it before the connection drops
       await sendEvent({
         stage: 'complete',
         progress: 100,
-        message: 'Update complete!',
+        message: 'Update complete! Restarting services...',
         newVersion,
       });
+
+      // Stage: Restarting (this will kill the current process)
+      // Frontend should poll /api/update/status to confirm new process is ready
+      try {
+        await execWithTimeout('pm2 restart ecosystem.config.js', projectRoot);
+      } catch {
+        // PM2 restart might "fail" from our perspective because the process dies
+        // This is expected behavior - the restart is successful
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
