@@ -81,6 +81,8 @@ export function useTerminalConnection(
       }
 
       if (needsNewSession) {
+        terminal.clear();
+
         const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
 
         const response = await fetch(`${baseUrl}/pty`, {
