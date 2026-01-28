@@ -85,8 +85,15 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'preparing', progress: 10, message: 'Local changes stashed' });
 
-      // Stage: Pulling
-      await sendEvent({ stage: 'pulling', progress: 25, message: 'Fetching latest changes...' });
+      await sendEvent({ stage: 'pulling', progress: 20, message: 'Fetching latest changes...' });
+
+      try {
+        await execWithTimeout('git fetch --tags origin', projectRoot);
+      } catch {
+        throw new Error('Failed to fetch tags from origin');
+      }
+
+      await sendEvent({ stage: 'pulling', progress: 30, message: 'Pulling latest code...' });
 
       try {
         await execWithTimeout('git pull origin main', projectRoot);
