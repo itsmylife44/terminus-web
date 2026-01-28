@@ -58,6 +58,18 @@ jobs:
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
           echo "New version: $NEW_TAG"
 
+      - name: Update version in package.json
+        run: |
+          NEW_VERSION="${{ steps.next_version.outputs.new_tag }}"
+          NEW_VERSION="${NEW_VERSION#v}"
+
+          # Update apps/web/package.json
+          cd apps/web
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+          cd ../..
+
+          echo "Updated package.json to $NEW_VERSION"
+
       - name: Update README with new version
         run: |
           NEW_TAG="${{ steps.next_version.outputs.new_tag }}"
@@ -76,16 +88,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit README changes
+      - name: Commit version changes
         run: |
           NEW_TAG="${{ steps.next_version.outputs.new_tag }}"
 
+          # Add all version-related changes
+          git add README.md apps/web/package.json
+
           # Check if there are changes to commit
-          if git diff --quiet README.md; then
-            echo "No README changes to commit"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
           else
-            git add README.md
-            git commit -m "chore(release): update install URLs to ${NEW_TAG}"
+            git commit -m "chore(release): bump version to ${NEW_TAG}"
           fi
 
       - name: Create and push tag
