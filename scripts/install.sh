@@ -22,14 +22,14 @@ NC='\033[0m'
 INSTALL_DIR="/opt/terminus-web"
 TERMINUS_USER="terminus"
 REPO_URL="https://github.com/itsmylife44/terminus-web.git"
+TERMINUS_PTY_REPO="https://github.com/itsmylife44/terminus-pty.git"
+TERMINUS_PTY_PATH="/usr/local/bin/terminus-pty"
 
 # User input variables
 DOMAIN=""
-OPENCODE_PATH=""
 SSL_EMAIL=""
 USE_HTTPS=false
-OPENCODE_VERSION="latest"
-OPENCODE_PASSWORD=""
+PTY_PASSWORD=""
 
 cleanup_on_error() {
     echo -e "${RED}[ERROR]${NC} Installation failed at line $1" >&2
@@ -172,26 +172,14 @@ gather_user_input() {
         fi
     done
     
+    PTY_PASSWORD=$(generate_password)
+    log_success "Generated secure password for web authentication"
+     
     echo
-    read -p "Enter OpenCode installation path [/usr/local/bin/opencode]: " OPENCODE_PATH
-    OPENCODE_PATH=${OPENCODE_PATH:-/usr/local/bin/opencode}
-    
-    if [[ -f "$OPENCODE_PATH" ]]; then
-        log_success "OpenCode found at: $OPENCODE_PATH"
-    else
-        log_warning "OpenCode not found at: $OPENCODE_PATH"
-        log_warning "OpenCode will be installed automatically during setup"
-     fi
-     
-     OPENCODE_PASSWORD=$(generate_password)
-     log_success "Generated secure password for web authentication"
-     
-     # Confirmation
-     echo
-     echo -e "${CYAN}Configuration Summary:${NC}"
+    echo -e "${CYAN}Configuration Summary:${NC}"
     echo "  Domain/IP: $DOMAIN"
     echo "  HTTPS: $([ "$USE_HTTPS" = true ] && echo "Enabled (${SSL_EMAIL})" || echo "Disabled")"
-    echo "  OpenCode: $OPENCODE_PATH"
+    echo "  PTY Server: $TERMINUS_PTY_PATH"
     echo "  Install Dir: $INSTALL_DIR"
     echo
     read -p "Proceed with installation? (y/N): " -n 1 -r
@@ -248,40 +236,54 @@ install_caddy() {
     log_success "Caddy installed"
 }
 
-install_opencode() {
-    log_step "Installing OpenCode for $TERMINUS_USER user..."
+install_go() {
+    log_step "Installing Go..."
     
-    local TERMINUS_OPENCODE="/home/$TERMINUS_USER/.opencode/bin/opencode"
-    
-    # Check if OpenCode already exists and is accessible by terminus user
-    if [[ -f "$TERMINUS_OPENCODE" ]]; then
-        local VERSION=$(su - "$TERMINUS_USER" -c "$TERMINUS_OPENCODE version" 2>/dev/null || echo "unknown")
-        log_success "OpenCode already installed at $TERMINUS_OPENCODE (version: $VERSION)"
-        
-        # Ensure symlink exists
-        if [[ ! -f "$OPENCODE_PATH" ]] || [[ "$(readlink -f "$OPENCODE_PATH")" != "$TERMINUS_OPENCODE" ]]; then
-            ln -sf "$TERMINUS_OPENCODE" "$OPENCODE_PATH"
-            log_success "Symlink created: $OPENCODE_PATH -> $TERMINUS_OPENCODE"
-        fi
+    if command -v go &> /dev/null; then
+        GO_VERSION=$(go version | grep -oP 'go\d+\.\d+' | head -1)
+        log_success "Go already installed: $GO_VERSION"
         return
     fi
     
-    # Install OpenCode as terminus user (NOT as root)
-    log_step "Downloading OpenCode as $TERMINUS_USER..."
-    su - "$TERMINUS_USER" -c "curl -fsSL https://opencode.ai/install | bash"
+    local GO_VERSION="1.23.4"
+    local ARCH=$(dpkg --print-architecture)
+    local GO_ARCH="amd64"
+    [[ "$ARCH" == "arm64" ]] && GO_ARCH="arm64"
     
-    # Verify installation
-    if [[ -f "$TERMINUS_OPENCODE" ]]; then
-        # Create symlink to /usr/local/bin for convenience
-        ln -sf "$TERMINUS_OPENCODE" "$OPENCODE_PATH"
-        
-        local VERSION=$(su - "$TERMINUS_USER" -c "$TERMINUS_OPENCODE version" 2>/dev/null || echo "installed")
-        log_success "OpenCode installed at $TERMINUS_OPENCODE (version: $VERSION)"
-        log_success "Symlink created: $OPENCODE_PATH -> $TERMINUS_OPENCODE"
-    else
-        log_error "OpenCode installation failed. Please install manually as $TERMINUS_USER user."
-        exit 1
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf /tmp/go.tar.gz
+    rm /tmp/go.tar.gz
+    
+    echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/go.sh
+    export PATH=$PATH:/usr/local/go/bin
+    
+    log_success "Go $(go version) installed"
+}
+
+install_terminus_pty() {
+    log_step "Installing terminus-pty..."
+    
+    if [[ -f "$TERMINUS_PTY_PATH" ]]; then
+        local VERSION=$("$TERMINUS_PTY_PATH" --version 2>/dev/null || echo "unknown")
+        log_success "terminus-pty already installed: $VERSION"
+        return
     fi
+    
+    install_go
+    
+    local BUILD_DIR=$(mktemp -d)
+    git clone --depth 1 "$TERMINUS_PTY_REPO" "$BUILD_DIR"
+    
+    cd "$BUILD_DIR"
+    /usr/local/go/bin/go build -ldflags "-s -w" -o terminus-pty .
+    mv terminus-pty "$TERMINUS_PTY_PATH"
+    chmod +x "$TERMINUS_PTY_PATH"
+    
+    rm -rf "$BUILD_DIR"
+    
+    local VERSION=$("$TERMINUS_PTY_PATH" --version 2>/dev/null || echo "installed")
+    log_success "terminus-pty installed: $VERSION"
 }
 
 install_dependencies() {
@@ -294,7 +296,7 @@ install_dependencies() {
     install_nodejs
     install_pm2
     install_caddy
-    install_opencode
+    install_terminus_pty
     
     log_success "All dependencies installed"
 }
@@ -349,19 +351,15 @@ configure_environment() {
         PROTOCOL="https"
     fi
     
-    # Create data directory for SQLite database
     mkdir -p "$DATA_DIR"
     chown $TERMINUS_USER:$TERMINUS_USER "$DATA_DIR"
     
     cat > "$WEB_ENV" << EOF
 NEXT_PUBLIC_OPENCODE_URL=${PROTOCOL}://${DOMAIN}
-NEXT_PUBLIC_OPENCODE_COMMAND=$OPENCODE_PATH
 NODE_ENV=production
 TERMINUS_WEB_PORT=${TERMINUS_WEB_PORT:-3000}
 OPENCODE_SERVE_PORT=${OPENCODE_SERVE_PORT:-3001}
 OPENCODE_INTERNAL_URL=http://localhost:${OPENCODE_SERVE_PORT:-3001}
-
-# SQLite database path for session persistence
 DATABASE_PATH=${DATA_DIR}/terminus.db
 EOF
     
@@ -396,21 +394,18 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     {
-      name: 'opencode-serve',
-      cwd: '/home/$TERMINUS_USER',
-      script: '$OPENCODE_PATH',
-      args: 'serve --port ${OPENCODE_SERVE_PORT:-3001} --hostname 0.0.0.0',
-       env: {
-         NODE_ENV: 'production',
-         OPENCODE_SERVER_PASSWORD: '$OPENCODE_PASSWORD',
-         OPENCODE_SERVER_USERNAME: 'admin'
-       },
-       instances: 1,
-       autorestart: true,
-       watch: false,
-       max_memory_restart: '512M',
-       error_file: '/var/log/pm2/opencode-serve-error.log',
-      out_file: '/var/log/pm2/opencode-serve-out.log',
+      name: 'terminus-pty',
+      script: '$TERMINUS_PTY_PATH',
+      args: '--port ${OPENCODE_SERVE_PORT:-3001} --host 0.0.0.0 --auth-user admin --auth-pass $PTY_PASSWORD --session-timeout 60s',
+      env: {
+        NODE_ENV: 'production'
+      },
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '256M',
+      error_file: '/var/log/pm2/terminus-pty-error.log',
+      out_file: '/var/log/pm2/terminus-pty-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
@@ -539,8 +534,8 @@ verify_installation() {
         ((ERRORS++))
     fi
     
-    if ! su - "$TERMINUS_USER" -c "pm2 list" | grep -q "opencode-serve.*online"; then
-        log_error "opencode-serve is not running"
+    if ! su - "$TERMINUS_USER" -c "pm2 list" | grep -q "terminus-pty.*online"; then
+        log_error "terminus-pty is not running"
         ((ERRORS++))
     fi
     
@@ -556,7 +551,7 @@ verify_installation() {
     fi
     
     if ! ss -tlnp | grep -q ":3001"; then
-        log_error "Port 3001 (OpenCode serve) is not listening"
+        log_error "Port 3001 (terminus-pty) is not listening"
         ((ERRORS++))
     fi
     
@@ -581,18 +576,18 @@ print_summary() {
     echo -e "${GREEN}║                                                ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     echo
-     echo -e "${CYAN}Access your terminal:${NC}"
-     echo -e "  ${GREEN}${PROTOCOL}://${DOMAIN}${NC}"
-     echo
-     echo -e "${CYAN}Login Credentials:${NC}"
-     echo -e "  Username: ${GREEN}admin${NC}"
-     echo -e "  Password: ${GREEN}${OPENCODE_PASSWORD}${NC}"
-     echo
-     echo -e "${YELLOW}  ⚠️  SAVE THIS PASSWORD - it will not be shown again!${NC}"
-     echo
-     echo -e "${CYAN}Architecture:${NC}"
+    echo -e "${CYAN}Access your terminal:${NC}"
+    echo -e "  ${GREEN}${PROTOCOL}://${DOMAIN}${NC}"
+    echo
+    echo -e "${CYAN}Login Credentials:${NC}"
+    echo -e "  Username: ${GREEN}admin${NC}"
+    echo -e "  Password: ${GREEN}${PTY_PASSWORD}${NC}"
+    echo
+    echo -e "${YELLOW}  SAVE THIS PASSWORD - it will not be shown again!${NC}"
+    echo
+    echo -e "${CYAN}Architecture:${NC}"
     echo -e "  Browser -> Caddy -> Next.js (port 3000)"
-    echo -e "  Browser -> Caddy -> OpenCode serve (port 3001, /pty/* routes)"
+    echo -e "  Browser -> Caddy -> terminus-pty (port 3001, /pty/* routes)"
     echo
     echo -e "${CYAN}Service Management:${NC}"
     echo -e "  Status:  ${YELLOW}sudo su - $TERMINUS_USER -c 'pm2 status'${NC}"
@@ -608,7 +603,7 @@ print_summary() {
     echo -e "${CYAN}Installation Details:${NC}"
     echo -e "  Install Dir:  $INSTALL_DIR"
     echo -e "  System User:  $TERMINUS_USER"
-    echo -e "  OpenCode:     $OPENCODE_PATH"
+    echo -e "  PTY Server:   $TERMINUS_PTY_PATH"
     echo -e "  Config File:  /etc/caddy/Caddyfile"
     echo
     if [[ "$USE_HTTPS" = true ]]; then

@@ -11,9 +11,9 @@ module.exports = {
       },
     },
     {
-      name: 'opencode-serve',
-      script: '/usr/local/bin/opencode',
-      args: `serve --port ${process.env.OPENCODE_SERVE_PORT || 3001} --hostname 0.0.0.0`,
+      name: 'terminus-pty',
+      script: '/usr/local/bin/terminus-pty',
+      args: `--port ${process.env.OPENCODE_SERVE_PORT || 3001} --host 0.0.0.0 --auth-user ${process.env.OPENCODE_SERVER_USERNAME || 'admin'} --auth-pass ${process.env.OPENCODE_SERVER_PASSWORD || 'changeme'}`,
       env: {
         NODE_ENV: 'production',
       },

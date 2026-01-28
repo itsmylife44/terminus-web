@@ -1,27 +1,36 @@
 # Terminus-Web
 
-Web-based terminal that runs the OpenCode CLI/TUI in your browser with full interactivity using a real PTY (Pseudo-Terminal) environment.
+Web-based terminal in your browser with full interactivity using a real PTY (Pseudo-Terminal) environment.
 
 ## Architecture
 
 ```
 Browser (ghostty-web) → Caddy → Next.js (port 3000)
-                            └→ OpenCode serve (port 3001, /pty and /pty/* routes)
+                            └→ terminus-pty (port 3001, /pty and /pty/* routes)
 ```
 
 - **Frontend**: Next.js with ghostty-web terminal emulator
-- **Backend**: `opencode serve` provides the PTY API
+- **Backend**: [terminus-pty](https://github.com/itsmylife44/terminus-pty) - Go PTY server with session pooling
 - **Reverse Proxy**: Caddy handles TLS and routing
+
+## Features
+
+- **Session Pooling**: Terminal sessions survive disconnections (60s timeout)
+- **Real PTY**: Full terminal interactivity with proper terminal emulation
+- **ghostty-web**: Same terminal emulator OpenCode uses internally
+- **Responsive**: Auto-resizing terminal
+- **Clipboard**: Native copy/paste support
+- **Multi-Client**: Multiple browser tabs can connect to the same session
 
 ## Quick Install (Ubuntu 24.04/22.04)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.17/scripts/install.sh -o install.sh && sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/install.sh -o install.sh && sudo bash install.sh
 ```
 
 The installer will:
 
-- Install Node.js 20, PM2, Caddy, and OpenCode
+- Install Node.js 20, PM2, Caddy, Go, and terminus-pty
 - Create a `terminus` system user
 - Clone and build the application
 - Configure automatic HTTPS with Let's Encrypt (for domains)
@@ -37,13 +46,12 @@ The installer will:
 ### What You'll Be Asked
 
 - Domain name or IP address
-- Path for OpenCode binary (default: `/usr/local/bin/opencode`)
 - Email for SSL certificate (optional, for Let's Encrypt notifications)
 
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.17/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/main/scripts/uninstall.sh -o uninstall.sh && sudo bash uninstall.sh
 ```
 
 ---
@@ -53,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.17/sc
 ### Prerequisites
 
 - Node.js 20+
-- OpenCode installed (`curl -fsSL https://opencode.ai/install | bash`)
+- Go 1.21+ (for terminus-pty)
 
 ### Quick Start
 
@@ -65,10 +73,11 @@ curl -fsSL https://raw.githubusercontent.com/itsmylife44/terminus-web/v1.1.17/sc
    npm install
    ```
 
-2. **Start OpenCode serve** (in one terminal):
+2. **Install and start terminus-pty** (in one terminal):
 
    ```bash
-   opencode serve --port 3001 --hostname 127.0.0.1
+   go install github.com/itsmylife44/terminus-pty@latest
+   terminus-pty --port 3001 --host 127.0.0.1
    ```
 
 3. **Start the frontend** (in another terminal):
@@ -92,19 +101,15 @@ Or create `apps/web/.env.local` manually:
 
 ```env
 NEXT_PUBLIC_OPENCODE_URL=http://localhost:3001
-NEXT_PUBLIC_OPENCODE_COMMAND=/path/to/opencode
 ```
 
-| Variable                       | Default                 | Description                               |
-| ------------------------------ | ----------------------- | ----------------------------------------- |
-| `TERMINUS_WEB_PORT`            | `3000`                  | Port for Next.js web frontend             |
-| `OPENCODE_SERVE_PORT`          | `3001`                  | Port for OpenCode serve backend           |
-| `NEXT_PUBLIC_OPENCODE_URL`     | `http://localhost:3001` | URL of OpenCode serve (browser WebSocket) |
-| `OPENCODE_INTERNAL_URL`        | `http://localhost:3001` | Internal URL for server-side API proxy    |
-| `NEXT_PUBLIC_OPENCODE_COMMAND` | (shell)                 | Command to run in PTY (optional)          |
-| `DATABASE_PATH`                | `./data/terminus.db`    | SQLite database path for session storage  |
-
-> **Note**: See `apps/web/.env.example` for a complete template with descriptions.
+| Variable                   | Default                 | Description                              |
+| -------------------------- | ----------------------- | ---------------------------------------- |
+| `TERMINUS_WEB_PORT`        | `3000`                  | Port for Next.js web frontend            |
+| `OPENCODE_SERVE_PORT`      | `3001`                  | Port for terminus-pty backend            |
+| `NEXT_PUBLIC_OPENCODE_URL` | `http://localhost:3001` | URL of PTY server (browser WebSocket)    |
+| `OPENCODE_INTERNAL_URL`    | `http://localhost:3001` | Internal URL for server-side API proxy   |
+| `DATABASE_PATH`            | `./data/terminus.db`    | SQLite database path for session storage |
 
 ---
 
@@ -116,10 +121,10 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
 
 ### Manual Install
 
-1. **Install OpenCode**:
+1. **Install terminus-pty**:
 
    ```bash
-   curl -fsSL https://opencode.ai/install | bash
+   go install github.com/itsmylife44/terminus-pty@latest
    ```
 
 2. **Build the project**:
@@ -133,13 +138,8 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
 
    ```env
    NEXT_PUBLIC_OPENCODE_URL=https://yourdomain.com
-   NEXT_PUBLIC_OPENCODE_COMMAND=/usr/local/bin/opencode
    OPENCODE_INTERNAL_URL=http://localhost:3001
    NODE_ENV=production
-
-   # Optional: Custom ports (defaults: 3000/3001)
-   # TERMINUS_WEB_PORT=3000
-   # OPENCODE_SERVE_PORT=3001
    ```
 
 4. **Start services** (PM2 recommended):
@@ -148,26 +148,23 @@ Use the one-liner installer for Ubuntu (see [Quick Install](#quick-install-ubunt
    # Start Next.js
    cd apps/web && npm start
 
-   # Start OpenCode serve
-   opencode serve --port 3001 --hostname 0.0.0.0
+   # Start terminus-pty
+   terminus-pty --port 3001 --host 0.0.0.0 --auth-user admin --auth-pass yourpassword
    ```
 
 ### Caddy Configuration
-
-> **Note**: The automated installer configures Caddy automatically. If using custom ports, ensure the reverse_proxy targets match your `TERMINUS_WEB_PORT` and `OPENCODE_SERVE_PORT` values.
 
 ```caddyfile
 yourdomain.com {
     tls your@email.com
 
-    # Match both /pty (POST to create session) and /pty/* (WebSocket, resize)
     @pty path /pty /pty/*
     handle @pty {
-        reverse_proxy localhost:3001  # OPENCODE_SERVE_PORT
+        reverse_proxy localhost:3001
     }
 
     handle {
-        reverse_proxy localhost:3000  # TERMINUS_WEB_PORT
+        reverse_proxy localhost:3000
     }
 }
 ```
@@ -188,7 +185,6 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # Match both /pty (POST to create session) and /pty/* (WebSocket, resize)
     location ~ ^/pty(/.*)?$ {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
@@ -200,15 +196,6 @@ server {
 ```
 
 ---
-
-## Features
-
-- **Real PTY**: Full terminal interactivity with proper terminal emulation
-- **ghostty-web**: Same terminal emulator OpenCode uses internally
-- **Responsive**: Auto-resizing terminal
-- **Clipboard**: Native copy/paste support
-- **Resilient**: Automatic reconnection with exponential backoff
-- **Status Indicator**: Real-time connection status
 
 ## Service Management (Production)
 
