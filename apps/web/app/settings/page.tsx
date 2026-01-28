@@ -6,9 +6,19 @@ import { toggleAutoUpdate, showConfirmDialog } from '@/lib/store/updateSlice';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Download } from 'lucide-react';
+import { RefreshCw, Download, Loader2, Trash2 } from 'lucide-react';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { APP_VERSION } from '@/lib/version/versionChecker';
+import {
+  SubscriptionDialog,
+  type SubscriptionOptions,
+} from '@/components/settings/SubscriptionDialog';
+
+interface OhMyOpenCodeStatus {
+  installed: boolean;
+  version?: string;
+  error?: string;
+}
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
@@ -23,6 +33,13 @@ export default function SettingsPage() {
   } = useVersionCheck();
 
   const [currentVersion, setCurrentVersion] = useState(APP_VERSION);
+
+  // OhMyOpenCode state
+  const [omoStatus, setOmoStatus] = useState<OhMyOpenCodeStatus>({ installed: false });
+  const [omoLoading, setOmoLoading] = useState(false);
+  const [omoError, setOmoError] = useState<string | null>(null);
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [confirmUninstallOpen, setConfirmUninstallOpen] = useState(false);
 
   useEffect(() => {
     const fetchCurrentVersion = async () => {
@@ -39,12 +56,88 @@ export default function SettingsPage() {
     fetchCurrentVersion();
   }, []);
 
+  // Fetch OhMyOpenCode status on mount
+  useEffect(() => {
+    const fetchOmoStatus = async () => {
+      try {
+        const response = await fetch('/api/oh-my-opencode');
+        if (response.ok) {
+          const data = await response.json();
+          setOmoStatus(data);
+        }
+      } catch {
+        setOmoStatus({ installed: false, error: 'Failed to check status' });
+      }
+    };
+    fetchOmoStatus();
+  }, []);
+
   const handleCheckForUpdates = async () => {
     await checkForUpdates();
   };
 
   const handleUpdateClick = () => {
     dispatch(showConfirmDialog(true));
+  };
+
+  const handleInstallOmo = async (subscriptions: SubscriptionOptions) => {
+    setOmoLoading(true);
+    setOmoError(null);
+
+    try {
+      const response = await fetch('/api/oh-my-opencode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'install',
+          ...subscriptions,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Refresh status
+        const statusResponse = await fetch('/api/oh-my-opencode');
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          setOmoStatus(statusData);
+        }
+        setSubscriptionDialogOpen(false);
+      } else {
+        setOmoError(data.error || 'Installation failed');
+      }
+    } catch (error) {
+      setOmoError(error instanceof Error ? error.message : 'Installation failed');
+    } finally {
+      setOmoLoading(false);
+    }
+  };
+
+  const handleUninstallOmo = async () => {
+    setOmoLoading(true);
+    setOmoError(null);
+
+    try {
+      const response = await fetch('/api/oh-my-opencode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'uninstall' }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setOmoStatus({ installed: false });
+        setConfirmUninstallOpen(false);
+      } else {
+        setOmoError(data.error || 'Uninstall failed');
+      }
+    } catch (error) {
+      setOmoError(error instanceof Error ? error.message : 'Uninstall failed');
+    } finally {
+      setOmoLoading(false);
+    }
   };
 
   const displayUpdateAvailable = updateAvailable || hookUpdateAvailable;
@@ -111,6 +204,77 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* OhMyOpenCode Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>OhMyOpenCode</CardTitle>
+          <CardDescription>AI coding assistant plugin for OpenCode</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Status</p>
+              <div className="flex items-center gap-2 mt-1">
+                {omoStatus.installed ? (
+                  <>
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                    </span>
+                    <span className="text-sm text-green-400">
+                      Installed {omoStatus.version && `v${omoStatus.version}`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-gray-500"></span>
+                    <span className="text-sm text-gray-400">Not Installed</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {omoError && (
+            <div className="rounded border border-red-900/50 bg-red-900/20 p-3">
+              <p className="text-sm text-red-300">{omoError}</p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-4 border-t">
+            {omoStatus.installed ? (
+              <Button
+                type="button"
+                onClick={() => setConfirmUninstallOpen(true)}
+                disabled={omoLoading}
+                variant="outline"
+                className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+              >
+                {omoLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Uninstall
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => setSubscriptionDialogOpen(true)}
+                disabled={omoLoading}
+              >
+                {omoLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Install
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>About</CardTitle>
@@ -129,6 +293,64 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Subscription Dialog */}
+      <SubscriptionDialog
+        isOpen={subscriptionDialogOpen}
+        onConfirm={handleInstallOmo}
+        onCancel={() => setSubscriptionDialogOpen(false)}
+        isLoading={omoLoading}
+      />
+
+      {/* Uninstall Confirmation Dialog */}
+      {confirmUninstallOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="uninstall-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => !omoLoading && setConfirmUninstallOpen(false)}
+          onKeyDown={(e) => e.key === 'Escape' && !omoLoading && setConfirmUninstallOpen(false)}
+        >
+          <div
+            role="document"
+            className="mx-4 w-full max-w-md rounded-lg bg-gray-900 p-6 text-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <h2 id="uninstall-dialog-title" className="text-lg font-semibold">
+              Uninstall OhMyOpenCode?
+            </h2>
+            <p className="mt-2 text-sm text-gray-400">
+              This will remove OhMyOpenCode from your OpenCode configuration.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmUninstallOpen(false)}
+                disabled={omoLoading}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUninstallOmo}
+                disabled={omoLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {omoLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uninstalling...
+                  </>
+                ) : (
+                  'Uninstall'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
