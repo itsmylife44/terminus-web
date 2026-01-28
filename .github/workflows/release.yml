@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths-ignore:
-      - '.github/**'
       - '*.md'
 
 permissions:
@@ -30,9 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Build application
-        run: npm run build
 
       - name: Get latest tag
         id: get_tag
@@ -69,6 +65,9 @@ jobs:
           cd ../..
 
           echo "Updated package.json to $NEW_VERSION"
+
+      - name: Build application
+        run: npm run build
 
       - name: Update README with new version
         run: |
