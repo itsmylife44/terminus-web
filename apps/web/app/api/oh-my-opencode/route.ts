@@ -49,9 +49,7 @@ interface ActionResponse {
   error?: string;
 }
 
-async function execWithTimeout(
-  command: string
-): Promise<{ stdout: string; stderr: string }> {
+async function execWithTimeout(command: string): Promise<{ stdout: string; stderr: string }> {
   return execAsync(command, { timeout: INSTALL_TIMEOUT });
 }
 
@@ -80,18 +78,18 @@ async function readOpencodeConfig(): Promise<{ content: string; config: Record<s
 async function writeOpencodeConfig(originalContent: string, pluginArray: string[]): Promise<void> {
   const configPath = getConfigPath();
   const configDir = dirname(configPath);
-  
+
   // Ensure directory exists
   if (!existsSync(configDir)) {
     await mkdir(configDir, { recursive: true });
   }
-  
+
   // Use jsonc-parser to modify while preserving comments
   const edits = modify(originalContent, ['plugin'], pluginArray, {
     formattingOptions: { tabSize: 2, insertSpaces: true },
   });
   const newContent = applyEdits(originalContent, edits);
-  
+
   await writeFile(configPath, newContent, 'utf-8');
 }
 
@@ -116,7 +114,10 @@ export async function GET(): Promise<Response> {
   try {
     const { config } = await readOpencodeConfig();
     const plugins = (config.plugin as string[]) || [];
-    const isInstalled = plugins.includes('oh-my-opencode');
+    // Check for oh-my-opencode with or without version suffix (e.g., "oh-my-opencode@3.1.5")
+    const isInstalled = plugins.some(
+      (p) => p === 'oh-my-opencode' || p.startsWith('oh-my-opencode@')
+    );
 
     if (!isInstalled) {
       const response: StatusResponse = { installed: false };
@@ -222,9 +223,10 @@ async function handleUninstall(): Promise<Response> {
 
     // Get current plugins array
     const currentPlugins = (config.plugin as string[]) || [];
-    
-    // Remove oh-my-opencode from plugins array
-    const newPlugins = currentPlugins.filter((p: string) => p !== 'oh-my-opencode');
+
+    const newPlugins = currentPlugins.filter(
+      (p: string) => p !== 'oh-my-opencode' && !p.startsWith('oh-my-opencode@')
+    );
 
     // Write updated config (preserving comments and formatting)
     await writeOpencodeConfig(content, newPlugins);
