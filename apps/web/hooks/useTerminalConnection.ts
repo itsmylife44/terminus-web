@@ -120,6 +120,23 @@ export function useTerminalConnection(
             rows: terminal.rows,
           })
         );
+      } else {
+        // Fetch scrollback before reconnecting (not on fresh session)
+        try {
+          const scrollbackResponse = await fetch(`${baseUrl}/pty/${ptyId}/scrollback`, {
+            headers: authHeader ? { Authorization: authHeader } : undefined,
+          });
+
+          if (scrollbackResponse.ok) {
+            const scrollback = await scrollbackResponse.text();
+            if (scrollback) {
+              terminal.write(scrollback);
+            }
+          }
+        } catch (err) {
+          console.warn('[PTY] Failed to fetch scrollback:', err);
+          // Continue with connection even if scrollback fetch fails
+        }
       }
 
       // Connect WebSocket
