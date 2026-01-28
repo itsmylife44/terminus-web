@@ -4,6 +4,7 @@ import type { MouseEvent, KeyboardEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { addTab, removeTab, setActiveTab } from '@/lib/store/tabsSlice';
+import { closeSession } from '@/lib/store/ptySessionsSlice';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +18,8 @@ export function TerminalTabs() {
   };
 
   const handleCloseTab = (e: MouseEvent, tabId: string) => {
-    e.stopPropagation(); // Prevent activating tab when closing
+    e.stopPropagation();
+    dispatch(closeSession(tabId));
     dispatch(removeTab(tabId));
   };
 
