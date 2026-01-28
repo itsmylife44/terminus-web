@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
   // Start async update process
   (async () => {
     setUpdateStatus(true);
-    const projectRoot = process.cwd();
+    const cwd = process.cwd();
+    const repoRoot = cwd.includes('/apps/web') ? cwd.replace('/apps/web', '') : cwd;
     let originalCommitHash: string | null = null;
     let stashApplied = false;
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
       // Store current commit hash for potential rollback
       try {
-        const { stdout } = await execWithTimeout('git rev-parse HEAD', projectRoot);
+        const { stdout } = await execWithTimeout('git rev-parse HEAD', repoRoot);
         originalCommitHash = stdout.trim();
       } catch {
         throw new Error('Failed to get current commit hash');
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
 
       // Stash local changes
       try {
-        const { stdout } = await execWithTimeout('git stash', projectRoot);
+        const { stdout } = await execWithTimeout('git stash', repoRoot);
         stashApplied = !stdout.includes('No local changes');
       } catch {
         stashApplied = false;
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       await sendEvent({ stage: 'pulling', progress: 20, message: 'Fetching latest changes...' });
 
       try {
-        await execWithTimeout('git fetch --tags origin', projectRoot);
+        await execWithTimeout('git fetch --tags origin', repoRoot);
       } catch {
         throw new Error('Failed to fetch tags from origin');
       }
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       await sendEvent({ stage: 'pulling', progress: 30, message: 'Pulling latest code...' });
 
       try {
-        await execWithTimeout('git pull origin main', projectRoot);
+        await execWithTimeout('git pull origin main', repoRoot);
       } catch {
         throw new Error('Failed to pull latest changes from origin');
       }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       await sendEvent({ stage: 'installing', progress: 50, message: 'Installing dependencies...' });
 
       try {
-        await execWithTimeout('npm install', projectRoot);
+        await execWithTimeout('npm install', repoRoot);
       } catch {
         throw new Error('Failed to install dependencies');
       }
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
       await sendEvent({ stage: 'building', progress: 75, message: 'Building application...' });
 
       try {
-        await execWithTimeout('npm run build', projectRoot);
+        await execWithTimeout('npm run build', repoRoot);
       } catch {
         throw new Error('Failed to build application');
       }
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       // Stage: Restarting (this will kill the current process)
       // Frontend should poll /api/update/status to confirm new process is ready
       try {
-        await execWithTimeout('pm2 restart ecosystem.config.js', projectRoot);
+        await execWithTimeout(`pm2 restart ${repoRoot}/ecosystem.config.js`, repoRoot);
       } catch {
         // PM2 restart might "fail" from our perspective because the process dies
         // This is expected behavior - the restart is successful
@@ -153,11 +154,11 @@ export async function POST(request: NextRequest) {
         await sendEvent({ stage: 'rolling_back', message: 'Rolling back to previous version...' });
 
         try {
-          await execWithTimeout(`git checkout ${originalCommitHash}`, projectRoot);
+          await execWithTimeout(`git checkout ${originalCommitHash}`, repoRoot);
 
           if (stashApplied) {
             try {
-              await execWithTimeout('git stash pop', projectRoot);
+              await execWithTimeout('git stash pop', repoRoot);
             } catch {
               // Stash pop might fail, log but continue
             }
