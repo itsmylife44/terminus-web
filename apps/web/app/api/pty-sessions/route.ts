@@ -53,8 +53,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(session, { status: 201 });
-  } catch (error) {
-    console.error('Failed to create PTY session:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Failed to create PTY session:', errorMessage);
     return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
   }
 }

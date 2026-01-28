@@ -79,14 +79,21 @@ export function getPtySession(id: string): PtySession | null {
 }
 
 /**
- * Create a new PTY session
+ * Create or update a PTY session (UPSERT pattern)
+ * If session with ID exists, updates it instead of failing
  */
 export function createPtySession(input: CreatePtySessionInput): PtySession {
   const db = getDb();
 
   const stmt = db.prepare(`
-    INSERT INTO pty_sessions (id, pty_id, title, cols, rows)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO pty_sessions (id, pty_id, title, cols, rows, status, last_connected_at)
+    VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      pty_id = excluded.pty_id,
+      status = 'active',
+      last_connected_at = datetime('now'),
+      cols = excluded.cols,
+      rows = excluded.rows
   `);
 
   stmt.run(input.id, input.pty_id, input.title || 'Terminal', input.cols || 80, input.rows || 24);
