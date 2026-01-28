@@ -1,27 +1,17 @@
 'use client';
 
-import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { fetchConfig, saveConfig } from '@/lib/store/configSlice';
 import { toggleAutoUpdate, showConfirmDialog } from '@/lib/store/updateSlice';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Loader2, Save, Check, AlertCircle, RefreshCw, Download } from 'lucide-react';
+import { RefreshCw, Download } from 'lucide-react';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { APP_VERSION } from '@/lib/version/versionChecker';
 
-type FormData = {
-  model: string;
-  theme: string;
-  logLevel: string;
-};
-
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
-  const { config, isLoading, isSaving, error } = useAppSelector((state) => state.config);
   const { autoUpdateEnabled, updateAvailable, latestVersion } = useAppSelector(
     (state) => state.update
   );
@@ -31,44 +21,7 @@ export default function SettingsPage() {
     isLoading: versionLoading,
   } = useVersionCheck();
 
-  const [formData, setFormData] = useState<FormData>({
-    model: '',
-    theme: 'dark',
-    logLevel: 'info',
-  });
-
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isCheckingVersion, setIsCheckingVersion] = useState(false);
-
-  useEffect(() => {
-    dispatch(fetchConfig());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (config) {
-      setFormData({
-        model: (config.model as string) || '',
-        theme: (config.theme as string) || 'dark',
-        logLevel: (config.logLevel as string) || 'info',
-      });
-    }
-  }, [config]);
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setShowSuccess(false);
-
-    const result = await dispatch(saveConfig(formData));
-
-    if (saveConfig.fulfilled.match(result)) {
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    }
-  };
-
-  const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
 
   const handleCheckForUpdates = async () => {
     setIsCheckingVersion(true);
@@ -86,116 +39,13 @@ export default function SettingsPage() {
   const displayUpdateAvailable = updateAvailable || hookUpdateAvailable;
   const displayLatestVersion = latestVersion || hookLatestVersion;
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 space-y-6 p-8 pt-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-          <p className="text-muted-foreground mt-1">Manage your OpenCode configuration</p>
+          <p className="text-muted-foreground mt-1">Manage Terminus configuration</p>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>System Configuration</CardTitle>
-          <CardDescription>Modify core OpenCode parameters</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="model" className="text-sm font-medium">
-                Model Selection
-              </label>
-              <Input
-                id="model"
-                type="text"
-                value={formData.model}
-                onChange={(e) => handleChange('model', e.target.value)}
-                placeholder="e.g., anthropic/claude-3-5-sonnet"
-                className="font-mono"
-              />
-              <p className="text-xs text-muted-foreground">Provider and model configuration</p>
-            </div>
-
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Theme</legend>
-              <div className="flex gap-2">
-                {['dark', 'light', 'auto'].map((theme) => (
-                  <Button
-                    key={theme}
-                    type="button"
-                    variant={formData.theme === theme ? 'default' : 'outline'}
-                    onClick={() => handleChange('theme', theme)}
-                    className="capitalize"
-                  >
-                    {theme}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">Visual appearance mode</p>
-            </fieldset>
-
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Log Level</legend>
-              <div className="flex gap-2">
-                {['debug', 'info', 'warn', 'error'].map((level) => (
-                  <Button
-                    key={level}
-                    type="button"
-                    variant={formData.logLevel === level ? 'default' : 'outline'}
-                    onClick={() => handleChange('logLevel', level)}
-                    className="capitalize"
-                  >
-                    {level}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">Diagnostic output verbosity</p>
-            </fieldset>
-
-            {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            )}
-            {showSuccess && (
-              <div className="flex items-center gap-2 text-green-500 text-sm">
-                <Check className="h-4 w-4" />
-                <span>Configuration saved successfully</span>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-4 border-t">
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Configuration
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div className="text-xs text-muted-foreground font-mono px-1">
-        CONFIG_PATH: ~/.opencode/config.json
-        {config?.version && <span className="ml-4">VERSION: {config.version}</span>}
       </div>
 
       <Card>
@@ -248,6 +98,25 @@ export default function SettingsPage() {
                 Update Now
               </Button>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>About</CardTitle>
+          <CardDescription>System information</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Frontend</p>
+              <p className="font-mono">terminus-web</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Backend</p>
+              <p className="font-mono">terminus-pty</p>
+            </div>
           </div>
         </CardContent>
       </Card>

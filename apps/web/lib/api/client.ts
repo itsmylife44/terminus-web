@@ -121,12 +121,13 @@ export class OpenCodeAPIClient {
   }
 
   /**
-   * Check system health
-   * @returns Promise resolving to true if healthy
+   * Check system health against terminus-pty backend
+   * @returns Promise resolving to true if healthy and authenticated
    */
   public async health(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/global/health`, {
+      // terminus-pty exposes /health endpoint (not /global/health)
+      const response = await fetch(`${this.baseUrl}/health`, {
         headers: this.getHeaders(),
       });
       return response.ok;
