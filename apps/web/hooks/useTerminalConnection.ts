@@ -154,10 +154,29 @@ export function useTerminalConnection(
           body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
         }).catch(() => {});
 
-        // For reconnecting to existing TUI sessions, send Ctrl+L to force redraw
+        // For reconnecting to existing TUI sessions, trigger resize to force TUI redraw
         if (!needsNewSession) {
-          setTimeout(() => {
-            socket.send('\x0c'); // Ctrl+L
+          setTimeout(async () => {
+            // Send slightly different size, then correct size to trigger SIGWINCH
+            await fetch(`${baseUrl}/pty/${ptyId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(authHeader && { Authorization: authHeader }),
+              },
+              body: JSON.stringify({ size: { cols: terminal.cols - 1, rows: terminal.rows } }),
+            }).catch(() => {});
+
+            setTimeout(async () => {
+              await fetch(`${baseUrl}/pty/${ptyId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(authHeader && { Authorization: authHeader }),
+                },
+                body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
+              }).catch(() => {});
+            }, 50);
           }, 100);
         }
 
