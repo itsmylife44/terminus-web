@@ -16,6 +16,7 @@ export interface PtySession {
   last_connected_at: string;
   cols: number;
   rows: number;
+  occupied?: boolean;
 }
 
 export interface CreatePtySessionInput {

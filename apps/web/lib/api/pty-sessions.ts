@@ -14,6 +14,7 @@ export interface PtySession {
   last_connected_at: string;
   cols: number;
   rows: number;
+  occupied?: boolean;
 }
 
 export interface CreatePtySessionInput {
@@ -133,4 +134,19 @@ export async function closePtySession(id: string): Promise<PtySession> {
  */
 export async function reactivatePtySession(id: string): Promise<PtySession> {
   return updatePtySession(id, { status: 'active' });
+}
+
+/**
+ * Take over an occupied session by disconnecting other clients
+ */
+export async function takeoverPtySession(ptyId: string): Promise<void> {
+  const response = await fetch(`/pty/${ptyId}/takeover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || 'Failed to take over session');
+  }
 }
