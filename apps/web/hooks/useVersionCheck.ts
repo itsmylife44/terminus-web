@@ -45,7 +45,9 @@ export function useVersionCheck(): UseVersionCheckReturn {
           // Use cache if less than 1 hour old
           if (cacheAge < CACHE_DURATION) {
             release = {
-              tag_name: cachedData.version,
+              tag_name: cachedData.version.startsWith('v')
+                ? cachedData.version
+                : `v${cachedData.version}`,
               html_url: cachedData.url,
               name: '',
             };
@@ -62,7 +64,7 @@ export function useVersionCheck(): UseVersionCheckReturn {
         // Cache the result if successful
         if (release) {
           const cacheData: CachedVersionCheck = {
-            version: release.tag_name,
+            version: release.tag_name.replace(/^v/, ''),
             url: release.html_url,
             timestamp: Date.now(),
           };
@@ -74,7 +76,7 @@ export function useVersionCheck(): UseVersionCheckReturn {
       if (release) {
         const isNewer = isNewerVersion(release.tag_name, APP_VERSION);
         setUpdateAvailable(isNewer);
-        setLatestVersion(release.tag_name);
+        setLatestVersion(release.tag_name.replace(/^v/, ''));
         setReleaseUrl(release.html_url);
       } else {
         setUpdateAvailable(false);
