@@ -144,7 +144,7 @@ export function useTerminalConnection(
           })
         );
 
-        // Send initial resize
+        // Send resize to trigger TUI redraw (SIGWINCH)
         await fetch(`${baseUrl}/pty/${ptyId}`, {
           method: 'PUT',
           headers: {
@@ -153,6 +153,13 @@ export function useTerminalConnection(
           },
           body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
         }).catch(() => {});
+
+        // For reconnecting to existing TUI sessions, send Ctrl+L to force redraw
+        if (!needsNewSession) {
+          setTimeout(() => {
+            socket.send('\x0c'); // Ctrl+L
+          }, 100);
+        }
 
         terminal.focus();
       };
