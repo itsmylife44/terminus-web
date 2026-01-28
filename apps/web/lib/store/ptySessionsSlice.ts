@@ -129,9 +129,13 @@ export const ptySessionsSlice = createSlice({
         state.error = action.error.message || 'Failed to fetch sessions';
       })
 
-      // Create session
       .addCase(createPtySession.fulfilled, (state, action) => {
-        state.sessions.unshift(action.payload);
+        const existingIndex = state.sessions.findIndex((s) => s.id === action.payload.id);
+        if (existingIndex !== -1) {
+          state.sessions[existingIndex] = action.payload;
+        } else {
+          state.sessions.unshift(action.payload);
+        }
       })
       .addCase(createPtySession.rejected, (state, action) => {
         state.error = action.error.message || 'Failed to create session';
