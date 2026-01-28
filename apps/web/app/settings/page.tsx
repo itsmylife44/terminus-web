@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { toggleAutoUpdate, showConfirmDialog } from '@/lib/store/updateSlice';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,22 @@ export default function SettingsPage() {
   } = useVersionCheck();
 
   const [isCheckingVersion, setIsCheckingVersion] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(APP_VERSION);
+
+  useEffect(() => {
+    const fetchCurrentVersion = async () => {
+      try {
+        const response = await fetch('/api/update/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.version) {
+            setCurrentVersion(data.version);
+          }
+        }
+      } catch {}
+    };
+    fetchCurrentVersion();
+  }, []);
 
   const handleCheckForUpdates = async () => {
     setIsCheckingVersion(true);
@@ -57,7 +73,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Current Version</p>
-              <p className="text-2xl font-mono mt-1">v{APP_VERSION}</p>
+              <p className="text-2xl font-mono mt-1">v{currentVersion}</p>
             </div>
             {displayUpdateAvailable && (
               <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-sm font-medium">
