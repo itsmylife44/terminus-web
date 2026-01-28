@@ -29,8 +29,8 @@ const STAGE_LABELS = {
 export function UpdateNotification() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [runtimeVersion, setRuntimeVersion] = useState<string | null>(null);
 
-  // Reconnection state
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionSuccess, setReconnectionSuccess] = useState(false);
   const [reconnectionError, setReconnectionError] = useState<string | null>(null);
@@ -54,10 +54,22 @@ export function UpdateNotification() {
   // Version check (existing)
   const { updateAvailable, latestVersion, releaseUrl, isLoading } = useVersionCheck();
 
-  // Auto-update hook
   const { triggerUpdate } = useAutoUpdate();
 
-  // Sync version check with Redux
+  useEffect(() => {
+    const fetchRuntimeVersion = async () => {
+      try {
+        const response = await fetch('/api/update/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.version) {
+            setRuntimeVersion(data.version);
+          }
+        }
+      } catch {}
+    };
+    fetchRuntimeVersion();
+  }, []);
   useEffect(() => {
     if (updateAvailable && latestVersion && releaseUrl) {
       dispatch(setUpdateAvailable({ latestVersion, releaseUrl }));
@@ -161,7 +173,7 @@ export function UpdateNotification() {
     dispatch(toggleAutoUpdate());
   };
 
-  const displayVersion = currentVersion || APP_VERSION;
+  const displayVersion = runtimeVersion || currentVersion || APP_VERSION;
   const hasUpdate = reduxUpdateAvailable || updateAvailable;
   const displayLatestVersion = reduxLatestVersion || latestVersion;
 
