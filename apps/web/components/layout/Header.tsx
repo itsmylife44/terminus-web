@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { logout } from '@/lib/store/authSlice';
 import { ConnectionStatus } from '@/components/terminal/ConnectionStatus';
-import { UpdateNotification } from './UpdateNotification';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -51,7 +50,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right: Status + User + Logout */}
       <div className="flex items-center gap-4">
-        <UpdateNotification />
         <ConnectionStatus />
         {username && (
           <span className="text-sm text-foreground-muted hidden sm:inline-block">{username}</span>
