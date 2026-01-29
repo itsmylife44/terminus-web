@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { getUpdateStatus, acquireUpdateLock, releaseUpdateLock } from './updateState';
 import { readFreshVersion } from '@/lib/version/versionChecker.server';
 import { getRecentlyActiveSessions } from '@/lib/db/pty-sessions';
+import { broadcastUpdateEvent } from '../auto-update/progress/route';
 
 const execAsync = promisify(exec);
 
@@ -76,7 +77,11 @@ export async function POST(request: NextRequest) {
   const writer = stream.writable.getWriter();
 
   const sendEvent = async (data: UpdateEvent) => {
+    console.log('[Update API] Sending event:', data);
+
     await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+
+    broadcastUpdateEvent(data);
   };
 
   // Start async update process

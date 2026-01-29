@@ -14,6 +14,7 @@ import {
 import { APP_VERSION } from '@/lib/version/versionChecker';
 import { Switch } from '@/components/ui/switch';
 import { UpdateConfirmDialog } from '@/components/layout/UpdateConfirmDialog';
+import { UpdateProgressModal } from '@/components/layout/UpdateProgressModal';
 import { useAutoUpdate } from '@/hooks/useAutoUpdate';
 
 const STAGE_LABELS = {
@@ -31,6 +32,7 @@ export function UpdateNotification() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [runtimeVersion, setRuntimeVersion] = useState<string | null>(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
 
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionSuccess, setReconnectionSuccess] = useState(false);
@@ -76,6 +78,13 @@ export function UpdateNotification() {
       dispatch(setUpdateAvailable({ latestVersion, releaseUrl }));
     }
   }, [updateAvailable, latestVersion, releaseUrl, dispatch]);
+
+  useEffect(() => {
+    if (isUpdating && !showProgressModal) {
+      console.log('[UpdateNotification] Update started, showing progress modal');
+      setShowProgressModal(true);
+    }
+  }, [isUpdating, showProgressModal]);
 
   // Reconnection polling after server restart
   useEffect(() => {
@@ -163,6 +172,9 @@ export function UpdateNotification() {
   };
 
   const handleConfirmUpdate = () => {
+    console.log('[UpdateNotification] User confirmed update, showing progress modal');
+    dispatch(hideConfirmDialog());
+    setShowProgressModal(true);
     triggerUpdate();
   };
 
@@ -172,6 +184,12 @@ export function UpdateNotification() {
     } else {
       dispatch(hideConfirmDialog());
     }
+  };
+
+  const handleRetryUpdate = () => {
+    console.log('[UpdateNotification] Retrying update');
+    setShowProgressModal(true);
+    triggerUpdate();
   };
 
   const handleToggleAutoUpdate = () => {
@@ -238,7 +256,7 @@ export function UpdateNotification() {
               </div>
 
               {/* Update Button */}
-              {hasUpdate && !isUpdating && (
+              {hasUpdate && !isUpdating && !showProgressModal && (
                 <button
                   type="button"
                   onClick={handleUpdateClick}
@@ -336,6 +354,13 @@ export function UpdateNotification() {
         currentVersion={displayVersion}
         newVersion={displayLatestVersion || ''}
         isAutoUpdate={isAutoUpdateTrigger}
+      />
+
+      {/* Progress Modal */}
+      <UpdateProgressModal
+        isOpen={showProgressModal || isUpdating}
+        onClose={() => setShowProgressModal(false)}
+        onRetry={handleRetryUpdate}
       />
 
       <style>{`

@@ -48,12 +48,17 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
   // Handle SSE update events
   const handleUpdateEvent = useCallback(
     (event: UpdateEvent) => {
+      console.log('[useAutoUpdate] Received update event:', event);
+
       switch (event.stage) {
         case 'preparing':
         case 'pulling':
         case 'installing':
         case 'building':
         case 'restarting':
+          console.log(
+            `[useAutoUpdate] Setting stage to ${event.stage} with progress ${event.progress}`
+          );
           dispatch(
             setUpdateStage({
               stage: event.stage,
@@ -63,12 +68,15 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
           );
           break;
         case 'complete':
+          console.log('[useAutoUpdate] Update complete, new version:', event.newVersion);
           dispatch(completeUpdate(event.newVersion ?? 'unknown'));
           break;
         case 'error':
+          console.error('[useAutoUpdate] Update error:', event.message);
           dispatch(setUpdateError(event.message ?? 'Update failed'));
           break;
         case 'rolling_back':
+          console.warn('[useAutoUpdate] Rolling back update:', event.message);
           dispatch(
             setUpdateStage({
               stage: 'rolling_back',
@@ -84,17 +92,26 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
 
   // Trigger update process via SSE
   const triggerUpdate = useCallback(() => {
+    console.log('[useAutoUpdate] Starting update process...');
     dispatch(startUpdate());
 
     // Use fetch for POST SSE (EventSource only supports GET)
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
+    console.log('[useAutoUpdate] Sending POST request to /api/update');
+
     fetch('/api/update', {
       method: 'POST',
       signal: abortController.signal,
     })
       .then(async (response) => {
+        console.log(
+          '[useAutoUpdate] Update response received:',
+          response.status,
+          response.statusText
+        );
+
         if (!response.ok) {
           throw new Error(`Update request failed: ${response.status}`);
         }
@@ -105,27 +122,39 @@ export function useAutoUpdate(): UseAutoUpdateReturn {
         }
 
         const decoder = new TextDecoder();
+        let buffer = '';
+
+        console.log('[useAutoUpdate] Starting to read SSE stream...');
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log('[useAutoUpdate] SSE stream ended');
+            break;
+          }
 
-          const text = decoder.decode(value);
-          // Parse SSE format: "data: {...}\n\n"
-          const lines = text.split('\n');
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6)) as UpdateEvent;
+                const dataStr = line.slice(6);
+                console.log('[useAutoUpdate] Raw SSE data:', dataStr);
+                const data = JSON.parse(dataStr) as UpdateEvent;
                 handleUpdateEvent(data);
-              } catch {
-                // Skip malformed JSON lines
+              } catch (error) {
+                console.error('[useAutoUpdate] Failed to parse SSE data:', error, 'Line:', line);
               }
             }
           }
         }
       })
       .catch((error: Error) => {
+        console.error('[useAutoUpdate] Update fetch error:', error);
         if (error.name !== 'AbortError') {
           dispatch(setUpdateError(error.message));
         }
