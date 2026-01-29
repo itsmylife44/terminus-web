@@ -46,8 +46,25 @@ export async function apiRequest<T = unknown>(
   }
 
   try {
-    return JSON.parse(text) as T;
+    const json = JSON.parse(text);
+
+    // Unwrap standardized API response format: {success: true, data: T}
+    if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+      if (json.success) {
+        return json.data as T;
+      } else {
+        // Handle error response: {success: false, error: string}
+        throw new Error(json.error || 'API request failed');
+      }
+    }
+
+    // Return raw JSON for non-standardized responses
+    return json as T;
   } catch (error) {
+    // Re-throw if already an Error from above
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error(
       `Invalid JSON response: ${error instanceof Error ? error.message : 'Parse error'}`
     );
