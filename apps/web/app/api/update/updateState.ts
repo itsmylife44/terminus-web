@@ -89,6 +89,33 @@ async function cleanupMetadata(dir: string): Promise<void> {
 }
 
 /**
+ * Check if a process is still running by its PID.
+ * Signal 0 to kill() does not send a signal, just checks if process exists.
+ */
+async function checkProcessRunning(pid: number): Promise<boolean> {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Force remove the lock file and associated lock files.
+ * Used for stale locks or locks from dead processes.
+ */
+async function forceUnlock(lockPath: string): Promise<void> {
+  try {
+    // proper-lockfile creates a .lock directory, remove it
+    await fs.rm(`${lockPath}.lock`, { recursive: true, force: true });
+    console.log(`Successfully forced unlock of ${lockPath}`);
+  } catch (error) {
+    console.warn('Failed to force unlock:', error);
+  }
+}
+
+/**
  * Check if an update is currently in progress.
  * Returns true if either the legacy in-memory flag is set OR a file lock exists.
  * This provides backward compatibility during transition period.
@@ -114,21 +141,46 @@ export async function getUpdateStatus(): Promise<boolean> {
 
 /**
  * Acquire the update lock.
- * Throws an error if lock cannot be acquired (another process holds it).
- * Writes metadata file with PID and timestamp for debugging.
+ * Automatically detects and cleans up stale locks before attempting acquisition.
+ * Throws an error if lock cannot be acquired after cleanup.
  */
 export async function acquireUpdateLock(): Promise<void> {
   const dir = await ensureLockDirectory();
   const lockPath = getLockPath(dir);
 
+  // Check for stale lock first
+  const isLocked = await check(lockPath);
+  if (isLocked) {
+    const metadata = await readMetadata(dir);
+    if (metadata) {
+      const lockAge = Date.now() - new Date(metadata.timestamp).getTime();
+      const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
+      if (lockAge > STALE_THRESHOLD) {
+        console.log(
+          `[Update] Removing stale lock (${lockAge}ms old, threshold: ${STALE_THRESHOLD}ms)`
+        );
+        await forceUnlock(lockPath);
+      } else {
+        // Check if process is still running
+        const isRunning = await checkProcessRunning(metadata.pid);
+        if (!isRunning) {
+          console.log(`[Update] Removing lock from dead process (PID ${metadata.pid})`);
+          await forceUnlock(lockPath);
+        }
+      }
+    }
+  }
+
   try {
-    // Acquire file lock with stale lock detection
+    // Acquire file lock with extended stale timeout
     await lock(lockPath, {
       retries: {
-        retries: 0, // Don't retry, fail fast
+        retries: 2,
+        minTimeout: 1000,
       },
-      stale: 30000, // Consider lock stale after 30 seconds
-      realpath: false, // Don't resolve symlinks (performance)
+      stale: 300000, // 5 minutes - matches our stale detection threshold
+      realpath: false,
     });
 
     // Set legacy flag for backward compatibility
@@ -137,15 +189,32 @@ export async function acquireUpdateLock(): Promise<void> {
     // Write metadata for debugging
     await writeMetadata(dir);
   } catch (error) {
-    // Check if another process holds the lock
-    const metadata = await readMetadata(dir);
-    const details = metadata
-      ? ` (held by PID ${metadata.pid} on ${metadata.hostname} since ${metadata.timestamp})`
-      : '';
+    // If still can't acquire after cleanup, attempt one more force-unlock and retry
+    console.warn('[Update] Lock acquisition failed, attempting force cleanup and retry...');
+    await forceUnlock(lockPath);
 
-    throw new Error(
-      `Failed to acquire update lock${details}: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    try {
+      await lock(lockPath, {
+        retries: {
+          retries: 0,
+        },
+        stale: 300000,
+        realpath: false,
+      });
+
+      isUpdating = true;
+      await writeMetadata(dir);
+    } catch (retryError) {
+      // Check if another process holds the lock
+      const metadata = await readMetadata(dir);
+      const details = metadata
+        ? ` (held by PID ${metadata.pid} on ${metadata.hostname} since ${metadata.timestamp})`
+        : '';
+
+      throw new Error(
+        `Failed to acquire update lock${details}: ${retryError instanceof Error ? retryError.message : 'Unknown error'}`
+      );
+    }
   }
 }
 

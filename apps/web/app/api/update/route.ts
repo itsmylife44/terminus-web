@@ -64,7 +64,19 @@ async function getTargetBranch(repoRoot: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  // Check mutex
+  const activeSessions = getRecentlyActiveSessions(5);
+  if (activeSessions.length > 0) {
+    return new Response(
+      JSON.stringify({
+        error: `Cannot update: ${activeSessions.length} active terminal sessions. Please close all terminals first.`,
+      }),
+      {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
   if (await getUpdateStatus()) {
     return new Response(JSON.stringify({ error: 'Update already in progress' }), {
       status: 409,
@@ -86,18 +98,6 @@ export async function POST(request: NextRequest) {
 
   // Start async update process
   (async () => {
-    // Check for active sessions before starting update
-    const activeSessions = getRecentlyActiveSessions(5);
-    if (activeSessions.length > 0) {
-      await sendEvent({
-        stage: 'error',
-        message: `Cannot update: ${activeSessions.length} active terminal sessions. Please close all terminals first.`,
-        canRetry: true,
-      });
-      await writer.close();
-      return;
-    }
-
     try {
       await acquireUpdateLock();
     } catch (error) {
