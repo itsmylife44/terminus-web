@@ -87,11 +87,15 @@ async function detectAndFixGitIssues(repoRoot: string, targetBranch: string): Pr
 // Helper: Ensure critical dependencies are installed
 async function ensureDependencies(repoRoot: string): Promise<void> {
   const requiredDeps = [
+    { name: 'typescript', dev: true },
     { name: 'turbo', dev: true },
     { name: 'tailwindcss-animate', dev: false },
     { name: '@tailwindcss/postcss', dev: true },
   ];
 
+  const missingDeps = [];
+
+  // Collect all missing deps first
   for (const dep of requiredDeps) {
     try {
       // Check if dependency exists in package.json
@@ -100,12 +104,35 @@ async function ensureDependencies(repoRoot: string): Promise<void> {
         throw new Error('Dependency missing');
       }
     } catch {
-      // Install missing dependency
+      missingDeps.push({ name: dep.name, dev: dep.dev });
+    }
+  }
+
+  if (missingDeps.length === 0) {
+    return; // All deps present
+  }
+
+  // Install all missing deps in one batch
+  const devDeps = missingDeps.filter((d) => d.dev).map((d) => d.name);
+  const prodDeps = missingDeps.filter((d) => !d.dev).map((d) => d.name);
+
+  try {
+    // Install dev deps
+    if (devDeps.length > 0) {
+      await execWithTimeout(`npm install ${devDeps.join(' ')} --save-dev`, repoRoot);
+    }
+    // Install prod deps
+    if (prodDeps.length > 0) {
+      await execWithTimeout(`npm install ${prodDeps.join(' ')} --save`, repoRoot);
+    }
+  } catch (error) {
+    // Fallback: install one by one
+    for (const dep of missingDeps) {
       try {
         const flag = dep.dev ? '--save-dev' : '--save';
         await execWithTimeout(`npm install ${dep.name} ${flag}`, repoRoot);
       } catch {
-        // Continue even if individual dep install fails
+        // Continue even if individual install fails
       }
     }
   }
@@ -287,6 +314,9 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'installing', progress: 65, message: 'Dependencies installed' });
 
+      // Ensure critical build dependencies before attempting build
+      await ensureDependencies(repoRoot);
+
       // Stage: Building - with error recovery and retries
       await sendEvent({ stage: 'building', progress: 75, message: 'Building application...' });
 
@@ -320,6 +350,21 @@ export async function POST(request: NextRequest) {
           } else if (buildAttempts === 2) {
             // Second retry: Install missing deps based on error
             const errorStr = buildError.stderr || buildError.message || '';
+
+            // Check for exit code 127 (command not found - missing build tools)
+            if (errorStr.includes('exited (127)') || errorStr.includes('command not found')) {
+              await sendEvent({
+                stage: 'building',
+                progress: 85,
+                message: 'Installing missing build tools...',
+              });
+
+              try {
+                await execWithTimeout('npm install typescript turbo --save-dev', repoRoot);
+              } catch {
+                // Continue to other recovery attempts
+              }
+            }
 
             if (errorStr.includes('turbo')) {
               try {
