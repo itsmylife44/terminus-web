@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getUpdateStatus, setUpdateStatus } from './updateState';
+import { getUpdateStatus, acquireUpdateLock, releaseUpdateLock } from './updateState';
 import { readFreshVersion } from '@/lib/version/versionChecker.server';
 
 const execAsync = promisify(exec);
@@ -63,7 +63,7 @@ async function getTargetBranch(repoRoot: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   // Check mutex
-  if (getUpdateStatus()) {
+  if (await getUpdateStatus()) {
     return new Response(JSON.stringify({ error: 'Update already in progress' }), {
       status: 409,
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,18 @@ export async function POST(request: NextRequest) {
 
   // Start async update process
   (async () => {
-    setUpdateStatus(true);
+    try {
+      await acquireUpdateLock();
+    } catch (error) {
+      await sendEvent({
+        stage: 'error',
+        message: error instanceof Error ? error.message : 'Failed to acquire update lock',
+        canRetry: true,
+      });
+      await writer.close();
+      return;
+    }
+
     const cwd = process.cwd();
     const repoRoot = cwd.includes('/apps/web') ? cwd.replace('/apps/web', '') : cwd;
     let originalCommitHash: string | null = null;
@@ -214,7 +225,7 @@ export async function POST(request: NextRequest) {
         canRetry: true,
       });
     } finally {
-      setUpdateStatus(false);
+      await releaseUpdateLock();
       await writer.close();
     }
   })();

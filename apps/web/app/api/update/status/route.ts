@@ -8,8 +8,9 @@ interface UpdateStatusResponse {
 }
 
 export async function GET() {
+  const isUpdating = await getUpdateStatus();
   const response: UpdateStatusResponse = {
-    status: getUpdateStatus() ? 'updating' : 'ready',
+    status: isUpdating ? 'updating' : 'ready',
     version: readFreshVersion(),
   };
 
