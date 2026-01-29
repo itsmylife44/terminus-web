@@ -100,7 +100,11 @@ export function createPtySession(input: CreatePtySessionInput): PtySession {
 
   stmt.run(input.id, input.pty_id, input.title || 'Terminal', input.cols || 80, input.rows || 24);
 
-  return getPtySession(input.id)!;
+  const session = getPtySession(input.id);
+  if (!session) {
+    throw new Error(`Failed to retrieve PTY session after creation: ${input.id}`);
+  }
+  return session;
 }
 
 /**

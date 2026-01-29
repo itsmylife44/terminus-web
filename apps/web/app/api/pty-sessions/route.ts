@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
     let { id, pty_id, title, cols, rows } = body;
 
     if (!id) {
-      id = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      id = `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
     if (!pty_id) {
-      pty_id = `pty-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      pty_id = `pty-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
     if (!title) {

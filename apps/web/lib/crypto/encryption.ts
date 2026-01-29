@@ -64,6 +64,9 @@ function getMasterKey(): Buffer {
 function deriveKey(masterKey: Buffer): Buffer {
   // HKDF provides key material derivation
   // We use SHA-256 with empty salt (derive from master key only)
+  // NOTE: hkdfSync returns ArrayBuffer | Buffer, but in Node.js environment
+  // it always returns Buffer. Type assertion is safe and required due to
+  // TypeScript's conservative typing of the crypto API.
   const derivedKey = hkdfSync(
     'sha256',
     masterKey,
