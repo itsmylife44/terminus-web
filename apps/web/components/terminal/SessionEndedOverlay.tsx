@@ -16,12 +16,13 @@ export function SessionEndedOverlay({ onNewSession }: SessionEndedOverlayProps) 
   }
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 text-white">
+    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 text-white">
       <div className="text-center space-y-6">
         <h2 className="text-2xl font-bold">Session Ended</h2>
-        
+
         <div className="font-mono text-gray-400">
-          Exit code: <span className={exitCode === 0 ? 'text-green-400' : 'text-red-400'}>{exitCode}</span>
+          Exit code:{' '}
+          <span className={exitCode === 0 ? 'text-green-400' : 'text-red-400'}>{exitCode}</span>
         </div>
 
         <Button

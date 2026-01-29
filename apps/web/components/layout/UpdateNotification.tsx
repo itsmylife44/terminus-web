@@ -243,7 +243,7 @@ export function UpdateNotification() {
       {isOpen && (
         <Portal>
           <div
-            className="fixed w-72 bg-background-elevated/80 backdrop-blur-xl border border-white/6 rounded-lg shadow-2xl z-50 overflow-hidden"
+            className="fixed w-72 bg-background-elevated/80 backdrop-blur-xl border border-white/6 rounded-lg shadow-2xl z-[90] overflow-hidden"
             style={{
               animation: 'slideDown 0.2s ease-out',
               top: `${dropdownPosition.top}px`,
