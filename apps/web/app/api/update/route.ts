@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getUpdateStatus, acquireUpdateLock, releaseUpdateLock } from './updateState';
 import { readFreshVersion } from '@/lib/version/versionChecker.server';
+import { getRecentlyActiveSessions } from '@/lib/db/pty-sessions';
 
 const execAsync = promisify(exec);
 
@@ -80,6 +81,18 @@ export async function POST(request: NextRequest) {
 
   // Start async update process
   (async () => {
+    // Check for active sessions before starting update
+    const activeSessions = getRecentlyActiveSessions(5);
+    if (activeSessions.length > 0) {
+      await sendEvent({
+        stage: 'error',
+        message: `Cannot update: ${activeSessions.length} active terminal sessions. Please close all terminals first.`,
+        canRetry: true,
+      });
+      await writer.close();
+      return;
+    }
+
     try {
       await acquireUpdateLock();
     } catch (error) {

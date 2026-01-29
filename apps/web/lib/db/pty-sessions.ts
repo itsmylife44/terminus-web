@@ -73,6 +73,23 @@ export function getActivePtySessions(): PtySession[] {
 }
 
 /**
+ * Get sessions that were active within the last N minutes
+ */
+export function getRecentlyActiveSessions(minutesAgo: number = 5): PtySession[] {
+  const db = getDb();
+  const cutoffTime = new Date(Date.now() - minutesAgo * 60 * 1000).toISOString();
+
+  const stmt = db.prepare(`
+    SELECT * FROM pty_sessions 
+    WHERE status = 'active' 
+      AND last_connected_at > ?
+    ORDER BY last_connected_at DESC
+  `);
+
+  return stmt.all(cutoffTime) as PtySession[];
+}
+
+/**
  * Get a single PTY session by ID
  */
 export function getPtySession(id: string): PtySession | null {
