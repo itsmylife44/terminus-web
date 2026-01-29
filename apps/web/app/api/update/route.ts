@@ -136,6 +136,21 @@ async function ensureDependencies(repoRoot: string): Promise<void> {
       }
     }
   }
+
+  // Ensure TypeScript is available in workspaces - critical for build
+  const workspacesNeedingTypeScript = [`${repoRoot}/packages/shared`, `${repoRoot}/apps/web`];
+
+  for (const workspace of workspacesNeedingTypeScript) {
+    try {
+      await execWithTimeout('npx tsc --version', workspace);
+    } catch {
+      try {
+        await execWithTimeout('npm install typescript --save-dev', workspace);
+      } catch {
+        // Continue even if install fails
+      }
+    }
+  }
 }
 
 async function getTargetBranch(repoRoot: string): Promise<string> {
@@ -360,7 +375,17 @@ export async function POST(request: NextRequest) {
               });
 
               try {
+                // Install TypeScript in root
                 await execWithTimeout('npm install typescript turbo --save-dev', repoRoot);
+
+                // Also ensure TypeScript is available in the shared package
+                await execWithTimeout(
+                  'npm install typescript --save-dev',
+                  `${repoRoot}/packages/shared`
+                );
+
+                // Reinstall all dependencies to ensure proper linking
+                await execWithTimeout('npm install', repoRoot);
               } catch {
                 // Continue to other recovery attempts
               }
