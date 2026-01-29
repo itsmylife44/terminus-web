@@ -26,6 +26,7 @@ const UPDATE_STAGE = {
   PULLING: 'pulling',
   INSTALLING: 'installing',
   BUILDING: 'building',
+  VERIFYING: 'verifying',
   RESTARTING: 'restarting',
   COMPLETE: 'complete',
   ERROR: 'error',
@@ -448,17 +449,62 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'building', progress: 85, message: 'Build complete' });
 
+      // Verify build outputs exist before proceeding
+      await sendEvent({
+        stage: 'verifying',
+        progress: 88,
+        message: 'Verifying build artifacts...',
+      });
+
+      try {
+        // Check if Next.js build output exists
+        await execWithTimeout('test -d apps/web/.next', repoRoot);
+        await execWithTimeout('test -f apps/web/.next/BUILD_ID', repoRoot);
+
+        // Check if shared package built successfully
+        await execWithTimeout('test -d packages/shared/dist', repoRoot);
+
+        // Quick health check on the build
+        const { stdout: buildId } = await execWithTimeout('cat apps/web/.next/BUILD_ID', repoRoot);
+        if (!buildId || buildId.trim().length === 0) {
+          throw new Error('Build verification failed: BUILD_ID is empty');
+        }
+
+        await sendEvent({ stage: 'verifying', progress: 90, message: 'Build artifacts verified' });
+      } catch (verifyError) {
+        // Build artifacts missing or invalid - attempt rebuild
+        await sendEvent({
+          stage: 'verifying',
+          progress: 89,
+          message: 'Build verification failed, attempting recovery...',
+        });
+
+        try {
+          await execWithTimeout('npm run build', repoRoot);
+          // Re-verify after rebuild
+          await execWithTimeout('test -d apps/web/.next', repoRoot);
+          await execWithTimeout('test -f apps/web/.next/BUILD_ID', repoRoot);
+        } catch {
+          throw new Error('Build verification failed: Required artifacts not found after rebuild');
+        }
+      }
+
       // Get new version BEFORE restart (reads directly from file, bypassing module cache)
       const newVersion = readFreshVersion();
 
-      // Send complete event BEFORE pm2 restart
-      // This ensures frontend receives it before the connection drops
+      // Stage: Restarting
       await sendEvent({
-        stage: 'complete',
-        progress: 100,
-        message: 'Update complete! Restarting services...',
-        newVersion,
+        stage: 'restarting',
+        progress: 95,
+        message: 'Restarting services...',
       });
+
+      // Store update success flag before restart
+      try {
+        await execWithTimeout(`echo '${newVersion}' > /tmp/terminus-update-success.txt`, repoRoot);
+      } catch {
+        // Continue even if flag file creation fails
+      }
 
       // Stage: Restarting (this will kill the current process)
       // Frontend should poll /api/update/status to confirm new process is ready
@@ -473,6 +519,14 @@ export async function POST(request: NextRequest) {
           // This is expected behavior - the restart is successful
         }
       }
+
+      // Send complete event (may not reach frontend if process dies)
+      await sendEvent({
+        stage: 'complete',
+        progress: 100,
+        message: 'Update complete!',
+        newVersion,
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
