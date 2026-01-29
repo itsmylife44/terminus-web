@@ -1,3 +1,16 @@
+/**
+ * Self-Healing Update System
+ *
+ * Automatically recovers from:
+ * - Git conflicts/divergence → Resets to origin/branch
+ * - Missing dependencies → Auto-installs required packages
+ * - Build failures → 3 retry attempts with different recovery strategies
+ *
+ * Recovery strategies:
+ * 1. Git: Pre-check for divergence, auto-reset on conflict
+ * 2. Deps: Clean install, legacy peer deps, ensure critical packages
+ * 3. Build: Clean caches, install missing modules, clear npm cache
+ */
 import type { NextRequest } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -39,6 +52,63 @@ async function execWithTimeout(
     cwd,
     timeout: STAGE_TIMEOUT,
   });
+}
+
+// Helper: Detect and fix git issues before pulling
+async function detectAndFixGitIssues(repoRoot: string, targetBranch: string): Promise<void> {
+  try {
+    // Check git status for divergence/conflicts
+    const { stdout: status } = await execWithTimeout('git status -uno', repoRoot);
+
+    if (status.includes('have diverged') || status.includes('Your branch is ahead')) {
+      // Reset to origin to resolve divergence
+      await execWithTimeout('git fetch origin', repoRoot);
+      await execWithTimeout(`git reset --hard origin/${targetBranch}`, repoRoot);
+      return;
+    }
+
+    // Check for uncommitted changes that might cause conflicts
+    const { stdout: diffStatus } = await execWithTimeout('git diff --stat', repoRoot);
+    if (diffStatus.trim()) {
+      // Stash or discard changes
+      await execWithTimeout('git reset --hard HEAD', repoRoot);
+    }
+  } catch {
+    // If status check fails, do hard reset as safety measure
+    try {
+      await execWithTimeout('git fetch origin', repoRoot);
+      await execWithTimeout(`git reset --hard origin/${targetBranch}`, repoRoot);
+    } catch {
+      // Even fetch might fail, try to continue
+    }
+  }
+}
+
+// Helper: Ensure critical dependencies are installed
+async function ensureDependencies(repoRoot: string): Promise<void> {
+  const requiredDeps = [
+    { name: 'turbo', dev: true },
+    { name: 'tailwindcss-animate', dev: false },
+    { name: '@tailwindcss/postcss', dev: true },
+  ];
+
+  for (const dep of requiredDeps) {
+    try {
+      // Check if dependency exists in package.json
+      const { stdout } = await execWithTimeout(`npm list ${dep.name} --depth=0`, repoRoot);
+      if (stdout.includes('(empty)') || stdout.includes('UNMET')) {
+        throw new Error('Dependency missing');
+      }
+    } catch {
+      // Install missing dependency
+      try {
+        const flag = dep.dev ? '--save-dev' : '--save';
+        await execWithTimeout(`npm install ${dep.name} ${flag}`, repoRoot);
+      } catch {
+        // Continue even if individual dep install fails
+      }
+    }
+  }
 }
 
 async function getTargetBranch(repoRoot: string): Promise<string> {
@@ -141,6 +211,9 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'preparing', progress: 10, message: 'Local changes stashed' });
 
+      // Pre-check and fix git issues before attempting pull
+      await detectAndFixGitIssues(repoRoot, targetBranch);
+
       await sendEvent({ stage: 'pulling', progress: 20, message: 'Fetching latest changes...' });
 
       try {
@@ -151,15 +224,36 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'pulling', progress: 30, message: 'Pulling latest code...' });
 
+      // Stage: Pulling - with automatic conflict resolution
       try {
         await execWithTimeout(`git pull origin ${targetBranch}`, repoRoot);
-      } catch {
-        throw new Error('Failed to pull latest changes from origin');
+      } catch (pullError) {
+        // Auto-fix git conflicts
+        await sendEvent({ stage: 'pulling', progress: 35, message: 'Resolving git conflicts...' });
+
+        try {
+          // Option 1: Reset to origin if diverged
+          await execWithTimeout('git fetch origin', repoRoot);
+          await execWithTimeout(`git reset --hard origin/${targetBranch}`, repoRoot);
+          await sendEvent({
+            stage: 'pulling',
+            progress: 40,
+            message: `Reset to origin/${targetBranch}`,
+          });
+        } catch {
+          // Option 2: Force checkout
+          try {
+            await execWithTimeout(`git checkout -f ${targetBranch}`, repoRoot);
+            await execWithTimeout(`git reset --hard origin/${targetBranch}`, repoRoot);
+          } catch {
+            throw new Error('Failed to resolve git conflicts');
+          }
+        }
       }
 
       await sendEvent({ stage: 'pulling', progress: 40, message: 'Latest changes pulled' });
 
-      // Stage: Installing
+      // Stage: Installing - with dependency resolution
       await sendEvent({ stage: 'installing', progress: 50, message: 'Installing dependencies...' });
 
       // Backup package-lock.json before npm install for rollback
@@ -171,19 +265,98 @@ export async function POST(request: NextRequest) {
 
       try {
         await execWithTimeout('npm install', repoRoot);
-      } catch {
-        throw new Error('Failed to install dependencies');
+      } catch (installError) {
+        await sendEvent({ stage: 'installing', progress: 55, message: 'Fixing dependencies...' });
+
+        // Clean install attempt
+        try {
+          await execWithTimeout('rm -rf node_modules package-lock.json', repoRoot);
+          await execWithTimeout('npm install', repoRoot);
+        } catch {
+          // Force install with legacy peer deps if needed
+          try {
+            await execWithTimeout('npm install --legacy-peer-deps', repoRoot);
+          } catch {
+            throw new Error('Failed to install dependencies after multiple attempts');
+          }
+        }
+
+        // Ensure critical build dependencies
+        await ensureDependencies(repoRoot);
       }
 
       await sendEvent({ stage: 'installing', progress: 65, message: 'Dependencies installed' });
 
-      // Stage: Building
+      // Stage: Building - with error recovery and retries
       await sendEvent({ stage: 'building', progress: 75, message: 'Building application...' });
 
-      try {
-        await execWithTimeout('npm run build', repoRoot);
-      } catch {
-        throw new Error('Failed to build application');
+      let buildAttempts = 0;
+      const maxBuildAttempts = 3;
+      let lastBuildError: any = null;
+
+      while (buildAttempts < maxBuildAttempts) {
+        try {
+          await execWithTimeout('npm run build', repoRoot);
+          break; // Build successful
+        } catch (buildError: any) {
+          buildAttempts++;
+          lastBuildError = buildError;
+
+          await sendEvent({
+            stage: 'building',
+            progress: 75 + buildAttempts * 5,
+            message: `Build attempt ${buildAttempts}/${maxBuildAttempts}...`,
+          });
+
+          if (buildAttempts === 1) {
+            // First retry: Clean .next and turbo cache
+            try {
+              await execWithTimeout('rm -rf apps/web/.next', repoRoot);
+              await execWithTimeout('rm -rf .turbo', repoRoot);
+              await execWithTimeout('rm -rf node_modules/.cache', repoRoot);
+            } catch {
+              // Continue even if cleanup fails
+            }
+          } else if (buildAttempts === 2) {
+            // Second retry: Install missing deps based on error
+            const errorStr = buildError.stderr || buildError.message || '';
+
+            if (errorStr.includes('turbo')) {
+              try {
+                await execWithTimeout('npm install turbo --save-dev', repoRoot);
+              } catch {}
+            }
+            if (errorStr.includes('tailwindcss-animate')) {
+              try {
+                await execWithTimeout('npm install tailwindcss-animate', repoRoot);
+              } catch {}
+            }
+            if (errorStr.includes('@tailwindcss/postcss')) {
+              try {
+                await execWithTimeout('npm install @tailwindcss/postcss --save-dev', repoRoot);
+              } catch {}
+            }
+            if (errorStr.includes('Cannot find module')) {
+              // Generic module missing - try reinstalling all deps
+              try {
+                await execWithTimeout('npm ci', repoRoot);
+              } catch {
+                await execWithTimeout('npm install', repoRoot);
+              }
+            }
+
+            // Clear npm cache as last resort
+            try {
+              await execWithTimeout('npm cache clean --force', repoRoot);
+            } catch {}
+          }
+        }
+      }
+
+      if (buildAttempts >= maxBuildAttempts) {
+        throw new Error(
+          `Build failed after ${maxBuildAttempts} attempts: ${lastBuildError?.message || 'Unknown error'}`
+        );
       }
 
       await sendEvent({ stage: 'building', progress: 85, message: 'Build complete' });
