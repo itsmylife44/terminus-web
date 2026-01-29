@@ -26,10 +26,13 @@ export async function GET() {
     gitStatus: false,
   };
 
+  const cwd = process.cwd();
+  const repoRoot = cwd.includes('/apps/web') ? cwd.replace('/apps/web', '') : cwd;
+
   try {
     // Check Next.js build
     try {
-      await execAsync('test -d apps/web/.next && test -f apps/web/.next/BUILD_ID');
+      await execAsync('test -d .next && test -f .next/BUILD_ID', { cwd: `${repoRoot}/apps/web` });
       checks.nextBuild = true;
     } catch {
       errors.push('Next.js build artifacts not found');
@@ -37,7 +40,7 @@ export async function GET() {
 
     // Check shared package build
     try {
-      await execAsync('test -d packages/shared/dist');
+      await execAsync('test -d dist', { cwd: `${repoRoot}/packages/shared` });
       checks.sharedBuild = true;
     } catch {
       errors.push('Shared package build artifacts not found');
@@ -59,7 +62,7 @@ export async function GET() {
 
     // Check git status is clean
     try {
-      const { stdout } = await execAsync('git status --porcelain');
+      const { stdout } = await execAsync('git status --porcelain', { cwd: repoRoot });
       if (stdout.trim() === '') {
         checks.gitStatus = true;
       } else {
