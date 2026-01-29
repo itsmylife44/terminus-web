@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Download, Loader2, Trash2 } from 'lucide-react';
-import { useVersionCheck } from '@/hooks/useVersionCheck';
-import { APP_VERSION } from '@/lib/version/versionChecker';
+import { Download, Loader2, Trash2 } from 'lucide-react';
 import {
   SubscriptionDialog,
   type SubscriptionOptions,
@@ -19,15 +17,6 @@ interface OhMyOpenCodeStatus {
 }
 
 export default function SettingsPage() {
-  const {
-    updateAvailable: hookUpdateAvailable,
-    latestVersion: hookLatestVersion,
-    isLoading: versionLoading,
-    checkForUpdates,
-  } = useVersionCheck();
-
-  const [currentVersion] = useState(APP_VERSION);
-
   // OhMyOpenCode state
   const [omoStatus, setOmoStatus] = useState<OhMyOpenCodeStatus>({ installed: false });
   const [omoLoading, setOmoLoading] = useState(false);
@@ -50,10 +39,6 @@ export default function SettingsPage() {
     };
     fetchOmoStatus();
   }, []);
-
-  const handleCheckForUpdates = async () => {
-    await checkForUpdates();
-  };
 
   const handleInstallOmo = async (subscriptions: SubscriptionOptions) => {
     setOmoLoading(true);
@@ -123,38 +108,6 @@ export default function SettingsPage() {
           <p className="text-muted-foreground mt-1">Manage Terminus configuration</p>
         </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Updates</CardTitle>
-          <CardDescription>Software version information</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Current Version</p>
-              <p className="text-2xl font-mono mt-1">v{currentVersion}</p>
-            </div>
-            {hookUpdateAvailable && (
-              <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-sm font-medium">
-                v{hookLatestVersion} Available
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              onClick={handleCheckForUpdates}
-              disabled={versionLoading}
-              variant="outline"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${versionLoading ? 'animate-spin' : ''}`} />
-              Check for Updates
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* OhMyOpenCode Card */}
       <Card>
