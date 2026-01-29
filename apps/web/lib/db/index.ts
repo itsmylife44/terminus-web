@@ -119,10 +119,6 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_audit_user ON provider_audit_log(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_provider ON provider_audit_log(provider_id, created_at DESC);
-
-    -- Add new columns to existing databases (if they don't exist)
-    ALTER TABLE pty_sessions ADD COLUMN last_client_id TEXT;
-    ALTER TABLE pty_sessions ADD COLUMN tmux_session_name TEXT;
   `);
 }
 
