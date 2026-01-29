@@ -292,19 +292,22 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        await execWithTimeout('npm install --workspaces --include-workspace-root', repoRoot);
+        await execWithTimeout(
+          'NODE_ENV= npm install --workspaces --include-workspace-root',
+          repoRoot
+        );
       } catch (installError) {
         await sendEvent({ stage: 'installing', progress: 55, message: 'Fixing dependencies...' });
 
         // Clean install attempt with workspaces
         try {
           await execWithTimeout('rm -rf node_modules package-lock.json', repoRoot);
-          await execWithTimeout('npm ci --workspaces --include-workspace-root', repoRoot);
+          await execWithTimeout('NODE_ENV= npm ci --workspaces --include-workspace-root', repoRoot);
         } catch {
           // Fallback: regular install with legacy peer deps
           try {
             await execWithTimeout(
-              'npm install --workspaces --include-workspace-root --legacy-peer-deps',
+              'NODE_ENV= npm install --workspaces --include-workspace-root --legacy-peer-deps',
               repoRoot
             );
           } catch {
