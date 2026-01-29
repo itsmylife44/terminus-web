@@ -5,7 +5,7 @@ import type { MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { deletePtySession, renamePtySession, type PtySession } from '@/lib/store/ptySessionsSlice';
-import { addTab, setActiveTab, updateTabTitle } from '@/lib/store/tabsSlice';
+import { addTab, setActiveTab, updateTabTitle, removeTab } from '@/lib/store/tabsSlice';
 import { SessionDeleteDialog } from './SessionDeleteDialog';
 import { showToast } from '@/components/ui/toast';
 
@@ -115,6 +115,18 @@ export function SessionManager({ onClose }: SessionManagerProps) {
     if (deleteDialog.sessionId) {
       try {
         await dispatch(deletePtySession(deleteDialog.sessionId)).unwrap();
+
+        // Find and close the corresponding tab
+        const deletedSession = sessions.find((s) => s.id === deleteDialog.sessionId);
+        if (deletedSession) {
+          const tabToClose = tabs.find(
+            (t) => t.id === deletedSession.id || t.ptyId === deletedSession.pty_id
+          );
+          if (tabToClose) {
+            dispatch(removeTab(tabToClose.id));
+          }
+        }
+
         showToast(`Session "${deleteDialog.sessionName}" deleted`, 'success');
       } catch (error) {
         showToast('Failed to delete session', 'error');
