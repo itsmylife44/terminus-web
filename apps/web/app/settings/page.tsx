@@ -313,26 +313,25 @@ export default function SettingsPage() {
         isLoading={omoLoading}
       />
 
-      {/* Uninstall Confirmation Dialog */}
       {confirmUninstallOpen && (
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="uninstall-dialog-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => !omoLoading && setConfirmUninstallOpen(false)}
           onKeyDown={(e) => e.key === 'Escape' && !omoLoading && setConfirmUninstallOpen(false)}
         >
           <div
             role="document"
-            className="mx-4 w-full max-w-md rounded-lg bg-gray-900 p-6 text-white shadow-xl"
+            className="mx-4 w-full max-w-md rounded-lg bg-background-elevated/80 backdrop-blur-xl border border-white/6 p-6 text-foreground shadow-card"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <h2 id="uninstall-dialog-title" className="text-lg font-semibold">
+            <h2 id="uninstall-dialog-title" className="text-lg font-semibold text-foreground">
               Uninstall OhMyOpenCode?
             </h2>
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="mt-2 text-sm text-foreground-muted">
               This will remove OhMyOpenCode from your OpenCode configuration.
             </p>
             <div className="mt-6 flex gap-3">
@@ -347,7 +346,8 @@ export default function SettingsPage() {
               <Button
                 onClick={handleUninstallOmo}
                 disabled={omoLoading}
-                className="flex-1 bg-red-600 hover:bg-red-700"
+                variant="destructive"
+                className="flex-1"
               >
                 {omoLoading ? (
                   <>

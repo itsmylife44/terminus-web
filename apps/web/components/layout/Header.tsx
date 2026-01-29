@@ -21,14 +21,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-background-elevated/50 backdrop-blur-md border-b border-white/6">
+    <header className="flex items-center justify-between px-4 py-3 bg-background-elevated/80 backdrop-blur-xl border-b border-white/6">
       {/* Left: Hamburger (mobile) + Branding */}
       <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="md:hidden p-1 text-foreground-muted hover:text-foreground transition-colors"
+            className="md:hidden p-1 text-foreground-muted hover:text-foreground transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
           >
             <span className="sr-only">Open menu</span>
             <svg
@@ -47,7 +47,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </svg>
           </button>
         )}
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Terminus</h1>
+        <h1 className="text-xl font-bold gradient-text-primary tracking-tight">Terminus</h1>
       </div>
 
       {/* Right: Status + User + Logout */}
@@ -60,7 +60,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <button
           type="button"
           onClick={handleLogout}
-          className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+          className="px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground hover:bg-white/5 rounded-md border border-white/0 hover:border-white/10 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
         >
           Logout
         </button>

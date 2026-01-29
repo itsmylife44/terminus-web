@@ -42,56 +42,53 @@ export function UpdateConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="update-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onCancel}
       onKeyDown={(e) => e.key === 'Escape' && onCancel()}
     >
       <div
         role="document"
-        className="w-full max-w-md rounded-lg bg-gray-900 p-6 text-white shadow-xl"
+        className="w-full max-w-md rounded-lg bg-background-elevated/80 backdrop-blur-xl border border-white/6 p-6 text-foreground shadow-card"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="mb-4 flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-500" />
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
           <div>
-            <h2 id="update-dialog-title" className="text-lg font-semibold">
+            <h2 id="update-dialog-title" className="text-lg font-semibold text-foreground">
               {isAutoUpdate ? 'Auto-Update Detected' : 'Update Available'}
             </h2>
           </div>
         </div>
 
-        {/* Content */}
         <div className="mb-6 space-y-3">
-          <p className="text-gray-300">
+          <p className="text-foreground">
             {isAutoUpdate
               ? `Auto-update detected v${newVersion} available`
               : `Update to v${newVersion}?`}
           </p>
 
-          <div className="rounded bg-gray-800 p-3 text-sm text-gray-400">
+          <div className="rounded-md border border-white/6 bg-background-base p-3 text-sm text-foreground-muted">
             <p className="mb-1">
-              <span className="text-gray-500">Current:</span> v{currentVersion}
+              <span className="text-foreground-muted">Current:</span> v{currentVersion}
             </p>
             <p>
-              <span className="text-gray-500">New:</span> v{newVersion}
+              <span className="text-foreground-muted">New:</span> v{newVersion}
             </p>
           </div>
 
-          <div className="rounded border border-yellow-900/50 bg-yellow-900/20 p-3">
-            <p className="text-sm text-yellow-200">
+          <div className="rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
+            <p className="text-sm text-yellow-300">
               ⚠️ This will restart the server. Active terminal sessions will be disconnected.
             </p>
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex gap-3">
           <Button onClick={onCancel} variant="outline" className="flex-1">
             Cancel
           </Button>
-          <Button onClick={onConfirm} className="flex-1 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={onConfirm} className="flex-1">
             Update Now
           </Button>
         </div>
