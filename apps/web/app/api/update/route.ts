@@ -295,6 +295,23 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'pulling', progress: 40, message: 'Latest changes pulled' });
 
+      // Ensure workspace packages have dependencies after git pull - critical!
+      await sendEvent({
+        stage: 'installing',
+        progress: 45,
+        message: 'Preparing workspace dependencies...',
+      });
+      try {
+        await execWithTimeout('npm install', `${repoRoot}/packages/shared`);
+      } catch {
+        // Continue even if this fails
+      }
+      try {
+        await execWithTimeout('npm install', `${repoRoot}/apps/web`);
+      } catch {
+        // Continue even if this fails
+      }
+
       // Stage: Installing - with dependency resolution
       await sendEvent({ stage: 'installing', progress: 50, message: 'Installing dependencies...' });
 
