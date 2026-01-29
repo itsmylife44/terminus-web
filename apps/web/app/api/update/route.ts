@@ -137,21 +137,6 @@ async function ensureDependencies(repoRoot: string): Promise<void> {
       }
     }
   }
-
-  // Ensure TypeScript is available in workspaces - critical for build
-  const workspacesNeedingTypeScript = [`${repoRoot}/packages/shared`, `${repoRoot}/apps/web`];
-
-  for (const workspace of workspacesNeedingTypeScript) {
-    try {
-      await execWithTimeout('npx tsc --version', workspace);
-    } catch {
-      try {
-        await execWithTimeout('npm install typescript --save-dev', workspace);
-      } catch {
-        // Continue even if install fails
-      }
-    }
-  }
 }
 
 async function getTargetBranch(repoRoot: string): Promise<string> {
@@ -314,7 +299,6 @@ export async function POST(request: NextRequest) {
         // Clean install attempt with workspaces
         try {
           await execWithTimeout('rm -rf node_modules package-lock.json', repoRoot);
-          await execWithTimeout('rm -rf packages/*/node_modules apps/*/node_modules', repoRoot);
           await execWithTimeout('npm ci --workspaces --include-workspace-root', repoRoot);
         } catch {
           // Fallback: regular install with legacy peer deps
