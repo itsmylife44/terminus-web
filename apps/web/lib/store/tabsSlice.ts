@@ -121,7 +121,7 @@ export const tabsSlice = createSlice({
   },
 });
 
-export const { addTab, removeTab, setActiveTab, updateTabPtyId, setTabConnected } =
+export const { addTab, removeTab, setActiveTab, updateTabTitle, updateTabPtyId, setTabConnected } =
   tabsSlice.actions;
 
 export default tabsSlice.reducer;

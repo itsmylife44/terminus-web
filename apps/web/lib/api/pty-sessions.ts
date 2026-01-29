@@ -137,6 +137,25 @@ export async function reactivatePtySession(id: string): Promise<PtySession> {
 }
 
 /**
+ * Rename a PTY session
+ */
+export async function renamePtySession(id: string, title: string): Promise<PtySession> {
+  const response = await fetch(`${API_BASE}/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to rename session');
+  }
+
+  const result = await response.json();
+  return result.data;
+}
+
+/**
  * Take over an occupied session by disconnecting other clients
  */
 export async function takeoverPtySession(ptyId: string): Promise<void> {

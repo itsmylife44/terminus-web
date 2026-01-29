@@ -9,6 +9,7 @@ import {
   createPtySession as apiCreatePtySession,
   updatePtySession as apiUpdatePtySession,
   deletePtySession as apiDeletePtySession,
+  renamePtySession as apiRenamePtySession,
   type PtySession,
   type CreatePtySessionInput,
   type UpdatePtySessionInput,
@@ -98,6 +99,21 @@ export const reactivateSession = createAsyncThunk<PtySession, string>(
   }
 );
 
+/**
+ * Rename a PTY session
+ */
+export const renamePtySession = createAsyncThunk<
+  PtySession,
+  { id: string; title: string },
+  { rejectValue: string }
+>('ptySessions/rename', async ({ id, title }, { rejectWithValue }) => {
+  try {
+    return await apiRenamePtySession(id, title);
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to rename session');
+  }
+});
+
 export const ptySessionsSlice = createSlice({
   name: 'ptySessions',
   initialState,
@@ -176,6 +192,16 @@ export const ptySessionsSlice = createSlice({
         if (index !== -1) {
           state.sessions[index] = action.payload;
         }
+      })
+
+      .addCase(renamePtySession.fulfilled, (state, action) => {
+        const index = state.sessions.findIndex((s) => s.id === action.payload.id);
+        if (index !== -1) {
+          state.sessions[index] = action.payload;
+        }
+      })
+      .addCase(renamePtySession.rejected, (state, action) => {
+        state.error = action.payload ?? 'Failed to rename session';
       });
   },
 });
