@@ -15,7 +15,12 @@ export function AmbientBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Layer 1: Base radial gradient - deep space effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#0a0a0f_0%,#050506_50%,#020203_100%)]" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at top, #0a0a0f 0%, #050506 50%, #020203 100%)',
+        }}
+      />
 
       {/* Layer 2: Animated gradient blobs - floating light sources */}
       {/* Primary blob - center top, largest, accent color */}

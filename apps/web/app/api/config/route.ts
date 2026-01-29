@@ -5,6 +5,7 @@ import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { modifyJsoncFile } from '@/lib/config/jsonc-utils';
 import { parse } from 'jsonc-parser';
+import { createErrorResponse, createSuccessResponse } from '@/lib/errors/types';
 
 // Whitelist of allowed config files
 const ALLOWED_FILES = {
@@ -141,12 +142,12 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     // Validate file parameter
     if (!isAllowedFile(file)) {
-      const response: GetFileResponse = {
-        content: '',
-        exists: false,
-        error: `Invalid file name. Allowed files: ${Object.keys(ALLOWED_FILES).join(', ')}`,
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(
+        createErrorResponse(
+          `Invalid file name. Allowed files: ${Object.keys(ALLOWED_FILES).join(', ')}`
+        ),
+        { status: 400 }
+      );
     }
 
     // Read the requested file
@@ -158,12 +159,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     };
     return Response.json(response);
   } catch (error) {
-    const response: GetFileResponse = {
-      content: '',
-      exists: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(
+      createErrorResponse(error instanceof Error ? error.message : 'Unknown error occurred'),
+      { status: 500 }
+    );
   }
 }
 
@@ -178,51 +177,42 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { file, content } = body;
 
     if (!file || !content) {
-      const response: PostResponse = {
-        success: false,
-        error: 'Missing required fields: file and content',
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(createErrorResponse('Missing required fields: file and content'), {
+        status: 400,
+      });
     }
 
     // Validate file name
     if (!isAllowedFile(file)) {
-      const response: PostResponse = {
-        success: false,
-        error: `Invalid file name. Allowed files: ${Object.keys(ALLOWED_FILES).join(', ')}`,
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(
+        createErrorResponse(
+          `Invalid file name. Allowed files: ${Object.keys(ALLOWED_FILES).join(', ')}`
+        ),
+        { status: 400 }
+      );
     }
 
     // Validate content is a string
     if (typeof content !== 'string') {
-      const response: PostResponse = {
-        success: false,
-        error: 'Content must be a string',
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(createErrorResponse('Content must be a string'), { status: 400 });
     }
 
     // Validate JSON syntax
     const syntaxValidation = validateJsonSyntax(content);
     if (!syntaxValidation.valid) {
-      const response: PostResponse = {
-        success: false,
-        error: syntaxValidation.error,
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(createErrorResponse(syntaxValidation.error || 'Invalid JSON syntax'), {
+        status: 400,
+      });
     }
 
     // Write the file
     await writeConfigFile(file, content);
 
-    const response: PostResponse = { success: true };
-    return Response.json(response);
+    return Response.json(createSuccessResponse(null));
   } catch (error) {
-    const response: PostResponse = {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(
+      createErrorResponse(error instanceof Error ? error.message : 'Unknown error occurred'),
+      { status: 500 }
+    );
   }
 }

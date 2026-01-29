@@ -13,6 +13,7 @@ import {
   deletePtySession,
   type PtySessionStatus,
 } from '@/lib/db/pty-sessions';
+import { createErrorResponse, createSuccessResponse } from '@/lib/errors/types';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -24,13 +25,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const session = getPtySession(id);
 
     if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return NextResponse.json(createErrorResponse('Session not found'), { status: 404 });
     }
 
-    return NextResponse.json(session);
+    return NextResponse.json(createSuccessResponse(session));
   } catch (error) {
     console.error('Failed to get PTY session:', error);
-    return NextResponse.json({ error: 'Failed to get session' }, { status: 500 });
+    return NextResponse.json(createErrorResponse('Failed to get session'), { status: 500 });
   }
 }
 
@@ -41,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existingSession = getPtySession(id);
     if (!existingSession) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return NextResponse.json(createErrorResponse('Session not found'), { status: 404 });
     }
 
     const { title, status, cols, rows } = body;
@@ -49,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Validate status if provided
     if (status && !['active', 'disconnected', 'closed'].includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be: active, disconnected, or closed' },
+        createErrorResponse('Invalid status. Must be: active, disconnected, or closed'),
         { status: 400 }
       );
     }
@@ -61,10 +62,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       rows,
     });
 
-    return NextResponse.json(session);
+    return NextResponse.json(createSuccessResponse(session));
   } catch (error) {
     console.error('Failed to update PTY session:', error);
-    return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
+    return NextResponse.json(createErrorResponse('Failed to update session'), { status: 500 });
   }
 }
 
@@ -75,27 +76,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { title } = body;
 
     if (!title || title.trim() === '') {
-      return NextResponse.json({ success: false, error: 'Title cannot be empty' }, { status: 400 });
+      return NextResponse.json(createErrorResponse('Title cannot be empty'), { status: 400 });
     }
 
     if (title.length > 100) {
-      return NextResponse.json(
-        { success: false, error: 'Title must be 100 characters or less' },
-        { status: 400 }
-      );
+      return NextResponse.json(createErrorResponse('Title must be 100 characters or less'), {
+        status: 400,
+      });
     }
 
     const existingSession = getPtySession(id);
     if (!existingSession) {
-      return NextResponse.json({ success: false, error: 'Session not found' }, { status: 404 });
+      return NextResponse.json(createErrorResponse('Session not found'), { status: 404 });
     }
 
     const updated = updateSessionTitle(id, title.trim());
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json(createSuccessResponse(updated));
   } catch (error) {
     console.error('Failed to rename PTY session:', error);
     const message = error instanceof Error ? error.message : 'Failed to rename session';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json(createErrorResponse(message), { status: 500 });
   }
 }
 
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const session = getPtySession(id);
     if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return NextResponse.json(createErrorResponse('Session not found'), { status: 404 });
     }
 
     const OPENCODE_URL = process.env.OPENCODE_INTERNAL_URL || 'http://localhost:3001';
@@ -129,12 +129,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const deleted = deletePtySession(id);
     if (!deleted) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return NextResponse.json(createErrorResponse('Session not found'), { status: 404 });
     }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Failed to delete PTY session:', error);
-    return NextResponse.json({ error: 'Failed to delete session' }, { status: 500 });
+    return NextResponse.json(createErrorResponse('Failed to delete session'), { status: 500 });
   }
 }

@@ -12,6 +12,7 @@ import {
   type PtySessionStatus,
   type PtySession,
 } from '@/lib/db/pty-sessions';
+import { createErrorResponse, createSuccessResponse } from '@/lib/errors/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,10 +28,10 @@ export async function GET(request: NextRequest) {
       sessions = getActivePtySessions();
     }
 
-    return NextResponse.json(sessions);
+    return NextResponse.json(createSuccessResponse(sessions));
   } catch (error) {
     console.error('Failed to get PTY sessions:', error);
-    return NextResponse.json({ error: 'Failed to get sessions' }, { status: 500 });
+    return NextResponse.json(createErrorResponse('Failed to get sessions'), { status: 500 });
   }
 }
 
@@ -61,10 +62,10 @@ export async function POST(request: NextRequest) {
       rows: rows || 24,
     });
 
-    return NextResponse.json(session, { status: 201 });
+    return NextResponse.json(createSuccessResponse(session), { status: 201 });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Failed to create PTY session:', errorMessage);
-    return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
+    return NextResponse.json(createErrorResponse('Failed to create session'), { status: 500 });
   }
 }

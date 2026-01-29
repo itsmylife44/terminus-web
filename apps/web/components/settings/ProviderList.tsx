@@ -5,6 +5,7 @@ import type { OpenCodeProvider } from '@/lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface ProviderListProps {
   providers: OpenCodeProvider[];
@@ -62,10 +63,7 @@ export function ProviderList({
       {providers.map((provider) => (
         <Card
           key={provider.id}
-          className="border-l-4"
-          style={{
-            borderLeftColor: provider.isConnected ? 'hsl(142 76% 36%)' : 'hsl(var(--border))',
-          }}
+          className={cn('border-l-4', provider.isConnected ? 'border-green-600' : 'border-border')}
         >
           <CardHeader>
             <div className="flex items-center justify-between">

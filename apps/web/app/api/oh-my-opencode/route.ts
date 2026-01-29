@@ -7,6 +7,7 @@ import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { modifyJsoncFile } from '@/lib/config/jsonc-utils';
 import { parse } from 'jsonc-parser';
+import { createErrorResponse, createSuccessResponse } from '@/lib/errors/types';
 
 const execAsync = promisify(exec);
 
@@ -117,33 +118,25 @@ export async function GET(): Promise<Response> {
     );
 
     if (!isInstalled) {
-      const response: StatusResponse = { installed: false };
-      return Response.json(response);
+      return Response.json(createSuccessResponse({ installed: false }));
     }
 
     const version = await getInstalledVersion();
-    const response: StatusResponse = {
-      installed: true,
-      version: version || 'unknown',
-    };
-    return Response.json(response);
+    return Response.json(createSuccessResponse({ installed: true, version: version || 'unknown' }));
   } catch (error) {
-    const response: StatusResponse = {
-      installed: false,
-      error: error instanceof Error ? error.message : 'Failed to check installation status',
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(
+      createErrorResponse(
+        error instanceof Error ? error.message : 'Failed to check installation status'
+      ),
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
   // Prevent concurrent operations
   if (isOperationInProgress) {
-    const response: ActionResponse = {
-      success: false,
-      error: 'Operation already in progress',
-    };
-    return Response.json(response, { status: 429 });
+    return Response.json(createErrorResponse('Operation already in progress'), { status: 429 });
   }
 
   try {
@@ -151,21 +144,19 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Validate action
     if (!body.action || !isValidAction(body.action)) {
-      const response: ActionResponse = {
-        success: false,
-        error: 'Invalid action. Must be "install" or "uninstall"',
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(
+        createErrorResponse('Invalid action. Must be "install" or "uninstall"'),
+        { status: 400 }
+      );
     }
 
     // Check if bun is installed
     const bunInstalled = await checkBunInstalled();
     if (!bunInstalled) {
-      const response: ActionResponse = {
-        success: false,
-        error: 'bun is not installed. Please install bun first: https://bun.sh',
-      };
-      return Response.json(response, { status: 400 });
+      return Response.json(
+        createErrorResponse('bun is not installed. Please install bun first: https://bun.sh'),
+        { status: 400 }
+      );
     }
 
     isOperationInProgress = true;
@@ -181,11 +172,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   } catch (error) {
     isOperationInProgress = false;
-    const response: ActionResponse = {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(
+      createErrorResponse(error instanceof Error ? error.message : 'Unknown error occurred'),
+      { status: 500 }
+    );
   }
 }
 
@@ -202,15 +192,12 @@ async function handleInstall(body: InstallRequest): Promise<Response> {
 
   try {
     await execWithTimeout(command);
-    const response: ActionResponse = { success: true };
-    return Response.json(response);
+    return Response.json(createSuccessResponse(null));
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Installation failed';
-    const response: ActionResponse = {
-      success: false,
-      error: `Installation failed: ${errorMessage}`,
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(createErrorResponse(`Installation failed: ${errorMessage}`), {
+      status: 500,
+    });
   }
 }
 
@@ -236,14 +223,9 @@ async function handleUninstall(): Promise<Response> {
       // File may not exist, that's okay
     }
 
-    const response: ActionResponse = { success: true };
-    return Response.json(response);
+    return Response.json(createSuccessResponse(null));
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Uninstall failed';
-    const response: ActionResponse = {
-      success: false,
-      error: `Uninstall failed: ${errorMessage}`,
-    };
-    return Response.json(response, { status: 500 });
+    return Response.json(createErrorResponse(`Uninstall failed: ${errorMessage}`), { status: 500 });
   }
 }

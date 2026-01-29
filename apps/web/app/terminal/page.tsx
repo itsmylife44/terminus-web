@@ -74,8 +74,7 @@ export default function TerminalPage() {
             return (
               <div
                 key={tab.id}
-                className="w-full h-full"
-                style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
+                className={tab.id === activeTabId ? 'block w-full h-full' : 'hidden w-full h-full'}
               >
                 <TerminalClient
                   tabId={tab.id}
