@@ -304,18 +304,89 @@ server {
 
 ## Service Management (Production)
 
+### PM2 Process Manager
+
+The automated installer configures PM2 with systemd integration for automatic startup on system boot.
+
+#### PM2 Commands
+
 ```bash
 # Status
 sudo su - terminus -c 'pm2 status'
 
-# Logs
+# Logs (real-time)
 sudo su - terminus -c 'pm2 logs'
+
+# Logs (specific app)
+sudo su - terminus -c 'pm2 logs terminus-web'
+sudo su - terminus -c 'pm2 logs terminus-pty'
 
 # Restart
 sudo su - terminus -c 'pm2 restart all'
+sudo su - terminus -c 'pm2 restart terminus-web'
+sudo su - terminus -c 'pm2 restart terminus-pty'
 
 # Stop
 sudo su - terminus -c 'pm2 stop all'
+
+# Start
+sudo su - terminus -c 'pm2 start all'
+```
+
+### Systemd Integration
+
+PM2 automatically creates a systemd service for auto-start on boot. The installer runs:
+
+```bash
+pm2 startup systemd -u terminus --hp /home/terminus
+pm2 save
+```
+
+This creates a systemd service at: `/etc/systemd/system/pm2-terminus.service`
+
+#### Systemd Service Commands
+
+```bash
+# Check PM2 systemd service status
+sudo systemctl status pm2-terminus
+
+# Enable/disable auto-start
+sudo systemctl enable pm2-terminus
+sudo systemctl disable pm2-terminus
+
+# Restart PM2 systemd service
+sudo systemctl restart pm2-terminus
+
+# View systemd logs
+sudo journalctl -u pm2-terminus -f
+```
+
+### Caddy Web Server
+
+```bash
+# Check Caddy status
+sudo systemctl status caddy
+
+# Restart Caddy
+sudo systemctl restart caddy
+
+# View Caddy logs
+sudo journalctl -u caddy -f
+
+# Reload Caddy configuration
+sudo systemctl reload caddy
+```
+
+### Full System Restart
+
+To restart all services after a system update:
+
+```bash
+# Restart PM2 apps
+sudo su - terminus -c 'pm2 restart all'
+
+# Restart Caddy
+sudo systemctl restart caddy
 ```
 
 ## License
