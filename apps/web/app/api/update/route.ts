@@ -39,6 +39,28 @@ async function execWithTimeout(
   });
 }
 
+async function getTargetBranch(repoRoot: string): Promise<string> {
+  // Check for environment variable override
+  const envBranch = process.env.UPDATE_BRANCH;
+  if (envBranch) {
+    return envBranch;
+  }
+
+  // Detect current branch dynamically
+  try {
+    const { stdout } = await execWithTimeout('git rev-parse --abbrev-ref HEAD', repoRoot);
+    const branch = stdout.trim();
+    if (branch) {
+      return branch;
+    }
+  } catch {
+    // Detection failed, fall through to default
+  }
+
+  // Fallback to 'main' if detection fails
+  return 'main';
+}
+
 export async function POST(request: NextRequest) {
   // Check mutex
   if (getUpdateStatus()) {
@@ -63,10 +85,14 @@ export async function POST(request: NextRequest) {
     const repoRoot = cwd.includes('/apps/web') ? cwd.replace('/apps/web', '') : cwd;
     let originalCommitHash: string | null = null;
     let stashApplied = false;
+    let targetBranch: string | null = null;
 
     try {
       // Stage: Preparing
       await sendEvent({ stage: 'preparing', progress: 0, message: 'Starting update...' });
+
+      // Detect target branch dynamically
+      targetBranch = await getTargetBranch(repoRoot);
 
       // Store current commit hash for potential rollback
       try {
@@ -97,7 +123,7 @@ export async function POST(request: NextRequest) {
       await sendEvent({ stage: 'pulling', progress: 30, message: 'Pulling latest code...' });
 
       try {
-        await execWithTimeout('git pull origin main', repoRoot);
+        await execWithTimeout(`git pull origin ${targetBranch}`, repoRoot);
       } catch {
         throw new Error('Failed to pull latest changes from origin');
       }
