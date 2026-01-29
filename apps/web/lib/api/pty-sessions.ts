@@ -101,11 +101,10 @@ export async function reactivatePtySession(id: string): Promise<PtySession> {
  * Rename a PTY session
  */
 export async function renamePtySession(id: string, title: string): Promise<PtySession> {
-  const result = await apiRequest<{ data: PtySession }>(`${API_BASE}/${id}`, {
+  return apiRequest<PtySession>(`${API_BASE}/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ title }),
   });
-  return result.data;
 }
 
 /**
