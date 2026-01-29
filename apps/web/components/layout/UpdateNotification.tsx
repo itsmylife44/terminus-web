@@ -189,7 +189,7 @@ export function UpdateNotification() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="group relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-all duration-200 rounded-md hover:bg-gray-800/50"
+          className="group relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground-muted hover:text-foreground transition-all duration-200 rounded-md hover:bg-white/5"
         >
           <span className="font-mono tracking-tight">v{displayVersion}</span>
           {hasUpdate && (
@@ -203,16 +203,16 @@ export function UpdateNotification() {
         {/* Dropdown Panel */}
         {isOpen && (
           <div
-            className="absolute top-full right-0 mt-2 w-72 bg-gray-900 border border-gray-800 rounded-lg shadow-2xl z-50 overflow-hidden"
+            className="absolute top-full right-0 mt-2 w-72 bg-background-elevated/80 backdrop-blur-xl border border-white/6 rounded-lg shadow-2xl z-50 overflow-hidden"
             style={{
               animation: 'slideDown 0.2s ease-out',
             }}
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-gray-800 bg-gradient-to-br from-gray-900 to-gray-900/50">
+            <div className="px-4 py-3 border-b border-white/6 bg-gradient-to-br from-background-elevated to-background-elevated/50">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">Version Info</h3>
-                {isUpdating && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
+                <h3 className="text-sm font-semibold text-foreground">Version Info</h3>
+                {isUpdating && <Loader2 className="w-4 h-4 text-accent animate-spin" />}
               </div>
             </div>
 
@@ -221,15 +221,15 @@ export function UpdateNotification() {
               {/* Version Comparison */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Current</span>
-                  <span className="font-mono text-white font-medium">v{displayVersion}</span>
+                  <span className="text-foreground-muted">Current</span>
+                  <span className="font-mono text-foreground font-medium">v{displayVersion}</span>
                 </div>
                 {hasUpdate && displayLatestVersion && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Latest</span>
-                    <span className="font-mono text-blue-400 font-medium flex items-center gap-1.5">
+                    <span className="text-foreground-muted">Latest</span>
+                    <span className="font-mono text-accent font-medium flex items-center gap-1.5">
                       v{displayLatestVersion}
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-accent/20 text-accent border border-accent/30">
                         NEW
                       </span>
                     </span>
@@ -242,7 +242,7 @@ export function UpdateNotification() {
                 <button
                   type="button"
                   onClick={handleUpdateClick}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-md font-medium text-sm transition-all duration-200 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent to-accent hover:opacity-90 text-white rounded-md font-medium text-sm transition-all duration-200 shadow-lg shadow-accent/20 hover:shadow-accent/40"
                 >
                   <Download className="w-4 h-4" />
                   Update Now
@@ -253,14 +253,14 @@ export function UpdateNotification() {
               {isUpdating && updateStage && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">
+                    <span className="text-foreground-muted">
                       {STAGE_LABELS[updateStage] || 'Updating...'}
                     </span>
-                    <span className="text-gray-500 font-mono">{updateProgress}%</span>
+                    <span className="text-foreground-muted font-mono">{updateProgress}%</span>
                   </div>
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300 ease-out"
+                      className="h-full bg-gradient-to-r from-accent to-accent transition-all duration-300 ease-out"
                       style={{ width: `${updateProgress}%` }}
                     />
                   </div>
@@ -300,11 +300,11 @@ export function UpdateNotification() {
               )}
 
               {/* Auto-update Toggle */}
-              <div className="pt-2 border-t border-gray-800">
+              <div className="pt-2 border-t border-white/6">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white">Auto-update</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-sm font-medium text-foreground">Auto-update</span>
+                    <span className="text-xs text-foreground-muted">
                       Update automatically when available
                     </span>
                   </div>
@@ -318,7 +318,7 @@ export function UpdateNotification() {
                   href={reduxReleaseUrl || releaseUrl || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-center text-xs text-blue-400 hover:text-blue-300 transition-colors pt-1"
+                  className="block text-center text-xs text-accent hover:text-accent/80 transition-colors pt-1"
                 >
                   View release notes →
                 </a>

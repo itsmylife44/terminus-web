@@ -22,7 +22,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-background-elevated/80 backdrop-blur-xl border-b border-white/6">
-      {/* Left: Hamburger (mobile) + Branding */}
+      {/* Left: Hamburger (mobile) */}
       <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
@@ -47,7 +47,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </svg>
           </button>
         )}
-        <h1 className="text-xl font-bold gradient-text-primary tracking-tight">Terminus</h1>
       </div>
 
       {/* Right: Status + User + Logout */}
