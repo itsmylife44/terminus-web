@@ -144,6 +144,13 @@ export async function POST(request: NextRequest) {
       // Stage: Installing
       await sendEvent({ stage: 'installing', progress: 50, message: 'Installing dependencies...' });
 
+      // Backup package-lock.json before npm install for rollback
+      try {
+        await execWithTimeout('cp package-lock.json /tmp/package-lock.json.backup', repoRoot);
+      } catch {
+        // Backup might fail, continue anyway
+      }
+
       try {
         await execWithTimeout('npm install', repoRoot);
       } catch {
@@ -196,19 +203,50 @@ export async function POST(request: NextRequest) {
         await sendEvent({ stage: 'rolling_back', message: 'Rolling back to previous version...' });
 
         try {
-          await execWithTimeout(`git checkout ${originalCommitHash}`, repoRoot);
+          // 1. Git reset to original commit
+          await execWithTimeout(`git reset --hard ${originalCommitHash}`, repoRoot);
 
+          // 2. Restore package-lock.json from backup
+          try {
+            await execWithTimeout('cp /tmp/package-lock.json.backup package-lock.json', repoRoot);
+          } catch {
+            // Backup might not exist, continue
+          }
+
+          // 3. Reinstall dependencies to match original lockfile
+          try {
+            await execWithTimeout('npm ci', repoRoot);
+          } catch {
+            // npm ci might fail, try npm install as fallback
+            await execWithTimeout('npm install', repoRoot);
+          }
+
+          // 4. Rebuild with original code and dependencies
+          try {
+            await execWithTimeout('npm run build', repoRoot);
+          } catch {
+            // Build might fail during rollback
+          }
+
+          // 5. Restore stashed changes
           if (stashApplied) {
             try {
               await execWithTimeout('git stash pop', repoRoot);
             } catch {
-              // Stash pop might fail, log but continue
+              // Stash pop might fail due to conflicts
             }
+          }
+
+          // 6. Log rollback completion
+          try {
+            const logMessage = `[${new Date().toISOString()}] Rollback completed to ${originalCommitHash}\n`;
+            await execWithTimeout(`echo '${logMessage}' >> /tmp/terminus-update.log`, repoRoot);
+          } catch {
+            // Logging failure doesn't block rollback
           }
 
           await sendEvent({ stage: 'rolling_back', message: 'Rollback complete' });
         } catch {
-          // Rollback failed
           await sendEvent({
             stage: 'error',
             message: `Rollback failed. Manual intervention required. Original error: ${errorMessage}`,
