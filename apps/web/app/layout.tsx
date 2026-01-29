@@ -2,7 +2,7 @@
 
 import './globals.css';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Inter } from 'next/font/google';
 import { ReduxProvider } from '@/lib/store/provider';
@@ -11,6 +11,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { AmbientBackground } from '@/components/effects/AmbientBackground';
 import { ToastContainer } from '@/components/ui/toast';
+import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,6 +23,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Global unhandled promise rejection handler
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('[Global] Unhandled promise rejection:', event.reason);
+    };
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    return () => window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+  }, []);
+
   // Pages that handle their own layout
   const noLayoutPages = ['/login', '/terminal'];
   const showLayout = !noLayoutPages.some(
@@ -31,23 +41,25 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
       <body className="antialiased min-h-screen font-sans bg-background-base">
-        <AmbientBackground />
-        <ReduxProvider>
-          <ToastContainer />
-          <AuthGate>
-            {showLayout ? (
-              <>
-                <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-                <div className="flex flex-col min-h-screen md:ml-64 transition-all duration-300">
-                  <Header onMenuClick={() => setIsSidebarOpen(true)} />
-                  <main className="flex-1 p-4 md:p-6 overflow-y-auto">{children}</main>
-                </div>
-              </>
-            ) : (
-              <main className="min-h-screen">{children}</main>
-            )}
-          </AuthGate>
-        </ReduxProvider>
+        <ErrorBoundary>
+          <AmbientBackground />
+          <ReduxProvider>
+            <ToastContainer />
+            <AuthGate>
+              {showLayout ? (
+                <>
+                  <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+                  <div className="flex flex-col min-h-screen md:ml-64 transition-all duration-300">
+                    <Header onMenuClick={() => setIsSidebarOpen(true)} />
+                    <main className="flex-1 p-4 md:p-6 overflow-y-auto">{children}</main>
+                  </div>
+                </>
+              ) : (
+                <main className="min-h-screen">{children}</main>
+              )}
+            </AuthGate>
+          </ReduxProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
