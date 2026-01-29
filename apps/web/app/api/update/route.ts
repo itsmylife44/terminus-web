@@ -141,10 +141,15 @@ export async function POST(request: NextRequest) {
       // Stage: Restarting (this will kill the current process)
       // Frontend should poll /api/update/status to confirm new process is ready
       try {
-        await execWithTimeout(`pm2 restart ${repoRoot}/ecosystem.config.js`, repoRoot);
+        await execWithTimeout('pm2 restart terminus-web', repoRoot);
       } catch {
-        // PM2 restart might "fail" from our perspective because the process dies
-        // This is expected behavior - the restart is successful
+        // Fallback: restart all processes if terminus-web name fails
+        try {
+          await execWithTimeout('pm2 restart all', repoRoot);
+        } catch {
+          // PM2 restart might "fail" from our perspective because the process dies
+          // This is expected behavior - the restart is successful
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
