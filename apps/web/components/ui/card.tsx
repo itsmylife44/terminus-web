@@ -10,7 +10,10 @@ function Card({ className, ref, ...props }: CardProps) {
   return (
     <div
       ref={ref}
-      className={cn('rounded-lg border bg-card text-card-foreground shadow-sm', className)}
+      className={cn(
+        'rounded-2xl border border-white/6 bg-gradient-to-b from-white/8 to-white/2 text-card-foreground shadow-card backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:shadow-card-hover',
+        className
+      )}
       {...props}
     />
   );

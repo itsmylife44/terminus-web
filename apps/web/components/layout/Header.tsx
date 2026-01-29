@@ -21,14 +21,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-700">
+    <header className="flex items-center justify-between px-4 py-3 bg-background-elevated/50 backdrop-blur-md border-b border-white/6">
       {/* Left: Hamburger (mobile) + Branding */}
       <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="md:hidden p-1 text-gray-400 hover:text-white transition-colors"
+            className="md:hidden p-1 text-foreground-muted hover:text-foreground transition-colors"
           >
             <span className="sr-only">Open menu</span>
             <svg
@@ -47,7 +47,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </svg>
           </button>
         )}
-        <h1 className="text-xl font-bold text-white tracking-tight">Terminus</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Terminus</h1>
       </div>
 
       {/* Right: Status + User + Logout */}
@@ -55,12 +55,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <UpdateNotification />
         <ConnectionStatus />
         {username && (
-          <span className="text-sm text-gray-400 hidden sm:inline-block">{username}</span>
+          <span className="text-sm text-foreground-muted hidden sm:inline-block">{username}</span>
         )}
         <button
           type="button"
           onClick={handleLogout}
-          className="text-sm text-gray-400 hover:text-white transition-colors"
+          className="text-sm text-foreground-muted hover:text-foreground transition-colors"
         >
           Logout
         </button>

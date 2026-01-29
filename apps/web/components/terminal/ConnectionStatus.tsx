@@ -20,9 +20,9 @@ export function ConnectionStatus() {
       {showSpinner ? (
         <div className="w-2 h-2 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
       ) : (
-        <div className={`w-2 h-2 rounded-full ${color}`} />
+        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${color}`} />
       )}
-      <span className="text-sm text-gray-300">{text}</span>
+      <span className="text-sm text-gray-300 transition-colors duration-200">{text}</span>
     </div>
   );
 }

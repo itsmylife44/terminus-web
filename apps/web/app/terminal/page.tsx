@@ -46,16 +46,16 @@ export default function TerminalPage() {
 
   if (tabs.length === 0) {
     return (
-      <main className="flex h-full w-full flex-col bg-zinc-900 overflow-hidden">
+      <main className="flex h-full w-full flex-col bg-background-base overflow-hidden">
         <TerminalHeader />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
-            <div className="text-gray-400 text-lg">No terminal sessions open</div>
-            <Button onClick={handleNewTab} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <div className="text-foreground-muted text-lg">No terminal sessions open</div>
+            <Button onClick={handleNewTab} className="bg-accent hover:bg-accent-hover text-white">
               <Plus className="h-4 w-4 mr-2" />
               New Terminal
             </Button>
-            <p className="text-gray-600 text-sm">Or select a session from the sidebar</p>
+            <p className="text-foreground-subtle text-sm">Or select a session from the sidebar</p>
           </div>
         </div>
       </main>
@@ -63,7 +63,7 @@ export default function TerminalPage() {
   }
 
   return (
-    <main className="flex h-full w-full flex-col bg-zinc-900 overflow-hidden">
+    <main className="flex h-full w-full flex-col bg-background-base overflow-hidden">
       <TerminalHeader />
       <div className="flex-1 overflow-hidden relative">
         <TerminalContainer>
@@ -87,7 +87,7 @@ export default function TerminalPage() {
           })}
         </TerminalContainer>
       </div>
-      <div className="px-2 py-1 bg-gray-900 border-t border-gray-700 text-xs text-gray-500 text-center shrink-0">
+      <div className="px-2 py-1 bg-background-elevated/50 backdrop-blur-md border-t border-white/6 text-xs text-foreground-subtle text-center shrink-0">
         Ctrl+Shift+C to copy, Ctrl+Shift+V to paste
       </div>
     </main>

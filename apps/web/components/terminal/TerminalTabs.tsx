@@ -89,7 +89,7 @@ export function TerminalTabs() {
                 onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
                 tabIndex={0}
                 className={cn(
-                  'group relative flex items-center h-full min-w-[150px] max-w-[200px] px-3 border-r border-zinc-800 cursor-pointer select-none transition-colors',
+                  'group relative flex items-center h-full min-w-[150px] max-w-[200px] px-3 border-r border-zinc-800 cursor-pointer select-none transition-all duration-200',
                   activeTabId === tab.id
                     ? 'bg-zinc-900 text-white'
                     : 'bg-zinc-800 text-gray-400 hover:bg-zinc-850 hover:text-gray-200'
@@ -115,7 +115,7 @@ export function TerminalTabs() {
                   type="button"
                   onClick={(e) => handleCloseTab(e, tab.id)}
                   className={cn(
-                    'p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10',
+                    'p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/10 active:scale-[0.98]',
                     activeTabId === tab.id
                       ? 'text-gray-300 hover:text-white'
                       : 'text-gray-500 hover:text-gray-300'
@@ -133,7 +133,7 @@ export function TerminalTabs() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-sm text-gray-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50"
+            className="h-7 w-7 rounded-sm text-gray-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 transition-all duration-200 active:scale-[0.98]"
             onClick={handleAddTab}
             disabled={tabs.length >= 10}
             title={tabs.length >= 10 ? 'Maximum 10 tabs allowed' : 'New Tab'}

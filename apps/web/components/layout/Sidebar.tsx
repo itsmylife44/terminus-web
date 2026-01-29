@@ -106,9 +106,9 @@ interface SidebarProps {
  */
 function StatusDot({ status }: { status: string }) {
   const colors = {
-    active: 'bg-emerald-500',
+    active: 'bg-accent',
     disconnected: 'bg-amber-500',
-    closed: 'bg-gray-500',
+    closed: 'bg-foreground-subtle',
   };
   return (
     <span
@@ -243,10 +243,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-gray-950 border-r border-gray-800">
+    <div className="flex h-full flex-col bg-background-elevated/80 backdrop-blur-xl border-r border-white/6">
       {/* Header */}
-      <div className="flex h-14 items-center px-6 border-b border-gray-800">
-        <span className="text-lg font-bold text-white tracking-wider">TERMINUS</span>
+      <div className="flex h-14 items-center px-6 border-b border-white/6">
+        <span className="text-lg font-bold text-foreground tracking-wider">TERMINUS</span>
       </div>
 
       {/* Navigation */}
@@ -259,14 +259,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               key={item.path}
               href={item.path}
               onClick={onClose}
-              className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:bg-gray-900 hover:text-white'
+                  ? 'bg-white/10 text-foreground'
+                  : 'text-foreground-muted hover:bg-white/5 hover:text-foreground'
               }`}
             >
               <span
-                className={`mr-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}
+                className={`mr-3 flex-shrink-0 ${isActive ? 'text-foreground' : 'text-foreground-muted group-hover:text-foreground'}`}
               >
                 <item.icon />
               </span>
@@ -277,17 +277,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* PTY Sessions Section */}
-      <div className="flex-1 overflow-hidden flex flex-col border-t border-gray-800">
+      <div className="flex-1 overflow-hidden flex flex-col border-t border-white/6">
         <div className="px-4 py-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-foreground-subtle uppercase tracking-wider">
             Terminal Sessions
           </span>
-          {isLoading && <span className="text-xs text-gray-600">Loading...</span>}
+          {isLoading && <span className="text-xs text-foreground-subtle">Loading...</span>}
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
           {sessions.length === 0 && !isLoading ? (
-            <div className="px-3 py-4 text-center text-gray-600 text-xs">No saved sessions</div>
+            <div className="px-3 py-4 text-center text-foreground-subtle text-xs">
+              No saved sessions
+            </div>
           ) : (
             sessions.map((session) => {
               const isOpenInTab = tabs.some(
@@ -302,18 +304,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={() => handleSessionClick(session)}
                   onContextMenu={(e) => handleContextMenu(e, session.id)}
                   disabled={isClosed}
-                  className={`group w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
+                  className={`group w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-all duration-200 ${
                     isClosed
-                      ? 'text-gray-600 cursor-not-allowed opacity-60'
+                      ? 'text-foreground-subtle cursor-not-allowed opacity-60'
                       : isOpenInTab
-                        ? 'bg-gray-800 text-white cursor-pointer'
-                        : 'text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer'
+                        ? 'bg-white/10 text-foreground cursor-pointer'
+                        : 'text-foreground-muted hover:bg-white/5 hover:text-foreground hover:-translate-y-0.5 hover:shadow-lg cursor-pointer'
                   }`}
                 >
                   <StatusDot status={session.status} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{session.title}</div>
-                    <div className="text-xs text-gray-600 truncate">
+                    <div className="text-xs text-foreground-subtle truncate">
                       {isClosed ? 'Session ended' : formatRelativeTime(session.last_connected_at)}
                     </div>
                   </div>
@@ -325,14 +327,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
 
       {/* User Section */}
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-4 border-t border-white/6">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="h-8 w-8 rounded-full bg-gray-800 flex items-center justify-center text-xs font-medium text-white">
+          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-medium text-foreground">
             U
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-white">User</span>
-            <span className="text-xs text-gray-500">user@example.com</span>
+            <span className="text-sm font-medium text-foreground">User</span>
+            <span className="text-xs text-foreground-subtle">user@example.com</span>
           </div>
         </div>
       </div>
@@ -350,7 +352,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-background-deep/90 backdrop-blur-sm transition-opacity"
             onClick={onClose}
             aria-hidden="true"
           />
