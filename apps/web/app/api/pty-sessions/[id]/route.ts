@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getPtySession,
   updatePtySession,
+  updateSessionTitle,
   deletePtySession,
   type PtySessionStatus,
 } from '@/lib/db/pty-sessions';
@@ -64,6 +65,37 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Failed to update PTY session:', error);
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { title } = body;
+
+    if (!title || title.trim() === '') {
+      return NextResponse.json({ success: false, error: 'Title cannot be empty' }, { status: 400 });
+    }
+
+    if (title.length > 100) {
+      return NextResponse.json(
+        { success: false, error: 'Title must be 100 characters or less' },
+        { status: 400 }
+      );
+    }
+
+    const existingSession = getPtySession(id);
+    if (!existingSession) {
+      return NextResponse.json({ success: false, error: 'Session not found' }, { status: 404 });
+    }
+
+    const updated = updateSessionTitle(id, title.trim());
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to rename PTY session:', error);
+    const message = error instanceof Error ? error.message : 'Failed to rename session';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 

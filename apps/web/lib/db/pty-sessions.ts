@@ -176,6 +176,29 @@ export function updatePtySession(id: string, input: UpdatePtySessionInput): PtyS
 }
 
 /**
+ * Update only the title of a PTY session
+ * Used specifically for rename functionality
+ */
+export function updateSessionTitle(id: string, title: string): PtySession | null {
+  const db = getDb();
+
+  // Validate title is not empty and within reasonable length
+  if (!title || title.trim() === '' || title.length > 100) {
+    throw new Error('Invalid title: must be 1-100 characters');
+  }
+
+  const stmt = db.prepare(`
+    UPDATE pty_sessions 
+    SET title = ? 
+    WHERE id = ?
+  `);
+
+  stmt.run(title.trim(), id);
+
+  return getPtySession(id);
+}
+
+/**
  * Delete a PTY session
  */
 export function deletePtySession(id: string): boolean {
