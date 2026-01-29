@@ -54,6 +54,53 @@ export function TerminalClient({ tabId, existingPtyId, isActive = true }: Termin
           },
         });
 
+        term.attachCustomWheelEventHandler((event) => {
+          if (!term.hasMouseTracking()) {
+            return false;
+          }
+
+          const rect = term.element?.getBoundingClientRect();
+          if (!rect || rect.width === 0 || rect.height === 0) {
+            return false;
+          }
+
+          const cols = term.cols || 1;
+          const rows = term.rows || 1;
+          const col = Math.min(
+            cols,
+            Math.max(1, Math.ceil(((event.clientX - rect.left) / rect.width) * cols))
+          );
+          const row = Math.min(
+            rows,
+            Math.max(1, Math.ceil(((event.clientY - rect.top) / rect.height) * rows))
+          );
+
+          let steps = 0;
+          if (event.deltaMode === WheelEvent.DOM_DELTA_PIXEL) {
+            steps = Math.round(event.deltaY / 33);
+          } else if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+            steps = Math.round(event.deltaY);
+          } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+            steps = Math.round(event.deltaY * rows);
+          }
+
+          if (steps === 0) {
+            return true;
+          }
+
+          const baseCode = steps < 0 ? 64 : 65;
+          const modifier =
+            (event.shiftKey ? 4 : 0) + (event.altKey ? 8 : 0) + (event.ctrlKey ? 16 : 0);
+          const code = baseCode + modifier;
+          const count = Math.min(Math.abs(steps), 5);
+
+          for (let i = 0; i < count; i += 1) {
+            term.input(`\x1b[<${code};${col};${row}M`, true);
+          }
+
+          return true;
+        });
+
         const fitAddon = new ghostty.FitAddon();
         fitAddonRef.current = fitAddon;
         terminalInstanceRef.current = term;
@@ -92,6 +139,12 @@ export function TerminalClient({ tabId, existingPtyId, isActive = true }: Termin
       connectRef.current();
     }
   }, [terminal]);
+
+  useEffect(() => {
+    if (terminal && isActive) {
+      terminal.focus();
+    }
+  }, [terminal, isActive]);
 
   const handleReconnect = () => {
     dispatch(resetReconnectAttempts());

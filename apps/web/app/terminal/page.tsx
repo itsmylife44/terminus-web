@@ -5,7 +5,6 @@ import { Plus } from 'lucide-react';
 import { TerminalClient } from '@/components/terminal/TerminalClient';
 import { TerminalContainer } from '@/components/terminal/TerminalContainer';
 import { TerminalHeader } from '@/components/terminal/TerminalHeader';
-import { TerminalTabs } from '@/components/terminal/TerminalTabs';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { addTab } from '@/lib/store/tabsSlice';
 import { fetchPtySessions } from '@/lib/store/ptySessionsSlice';
@@ -66,7 +65,6 @@ export default function TerminalPage() {
   return (
     <main className="flex h-full w-full flex-col bg-zinc-900 overflow-hidden">
       <TerminalHeader />
-      <TerminalTabs />
       <div className="flex-1 overflow-hidden relative">
         <TerminalContainer>
           {tabs.map((tab) => {

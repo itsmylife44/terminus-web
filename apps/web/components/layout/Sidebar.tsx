@@ -3,10 +3,16 @@
 import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { fetchPtySessions, deletePtySession, PtySession } from '@/lib/store/ptySessionsSlice';
-import { addTab, setActiveTab } from '@/lib/store/tabsSlice';
+import {
+  fetchPtySessions,
+  deletePtySession,
+  renamePtySession,
+  PtySession,
+} from '@/lib/store/ptySessionsSlice';
+import { addTab, setActiveTab, updateTabTitle } from '@/lib/store/tabsSlice';
+import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu';
 
 // Icons
 const HomeIcon = () => (
@@ -136,10 +142,30 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { sessions, isLoading } = useAppSelector((state) => state.ptySessions);
   const { tabs } = useAppSelector((state) => state.tabs);
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    sessionId: string | null;
+  }>({ visible: false, x: 0, y: 0, sessionId: null });
+
   // Fetch PTY sessions on mount
   useEffect(() => {
     dispatch(fetchPtySessions());
   }, [dispatch]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => {
+      setContextMenu((prev) => ({ ...prev, visible: false }));
+    };
+
+    if (contextMenu.visible) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu.visible]);
 
   const handleSessionClick = (session: PtySession) => {
     if (session.status === 'closed') {
@@ -171,6 +197,49 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const handleDeleteSession = (e: MouseEvent, sessionId: string) => {
     e.stopPropagation();
     dispatch(deletePtySession(sessionId));
+  };
+
+  // Handle right-click context menu
+  const handleContextMenu = (e: MouseEvent, sessionId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      sessionId,
+    });
+  };
+
+  const handleRename = async () => {
+    const session = sessions.find((s) => s.id === contextMenu.sessionId);
+    if (!session || !contextMenu.sessionId) return;
+
+    const newTitle = window.prompt('Rename session:', session.title);
+
+    if (newTitle && newTitle.trim() !== '' && newTitle !== session.title) {
+      try {
+        await dispatch(
+          renamePtySession({ id: contextMenu.sessionId, title: newTitle.trim() })
+        ).unwrap();
+
+        const openTab = tabs.find((t) => t.id === session.id || t.ptyId === session.pty_id);
+        if (openTab) {
+          dispatch(updateTabTitle({ id: openTab.id, title: newTitle.trim() }));
+        }
+      } catch (error) {
+        console.error('Failed to rename session:', error);
+      }
+    }
+
+    setContextMenu({ visible: false, x: 0, y: 0, sessionId: null });
+  };
+
+  const handleDelete = () => {
+    if (contextMenu.sessionId) {
+      dispatch(deletePtySession(contextMenu.sessionId));
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, sessionId: null });
   };
 
   const SidebarContent = () => (
@@ -231,6 +300,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   type="button"
                   key={session.id}
                   onClick={() => handleSessionClick(session)}
+                  onContextMenu={(e) => handleContextMenu(e, session.id)}
                   disabled={isClosed}
                   className={`group w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
                     isClosed
@@ -247,16 +317,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {isClosed ? 'Session ended' : formatRelativeTime(session.last_connected_at)}
                     </div>
                   </div>
-                  {isClosed && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSession(e, session.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-gray-300 transition-all"
-                      title="Delete session"
-                    >
-                      <XIcon />
-                    </button>
-                  )}
                 </button>
               );
             })
@@ -299,6 +359,33 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
       )}
+
+      {/* Context Menu */}
+      <ContextMenu x={contextMenu.x} y={contextMenu.y} visible={contextMenu.visible}>
+        <ContextMenuItem
+          onClick={handleRename}
+          disabled={
+            contextMenu.sessionId
+              ? sessions.find((s) => s.id === contextMenu.sessionId)?.status === 'closed'
+              : true
+          }
+          aria-label="Rename session"
+        >
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={handleDelete}
+          disabled={
+            contextMenu.sessionId
+              ? sessions.find((s) => s.id === contextMenu.sessionId)?.status !== 'closed'
+              : true
+          }
+          destructive
+          aria-label="Delete session"
+        >
+          Delete
+        </ContextMenuItem>
+      </ContextMenu>
     </>
   );
 }
