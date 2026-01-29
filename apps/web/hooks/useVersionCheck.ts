@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { apiRequest } from '@/lib/utils/api-request';
 import {
   APP_VERSION,
   fetchLatestRelease,
@@ -27,14 +28,17 @@ const CACHE_DURATION = 300000; // 5 minutes
 
 async function fetchRuntimeVersion(): Promise<string> {
   try {
-    const response = await fetch('/api/update/status');
-    if (response.ok) {
-      const data = await response.json();
-      if (data.version) {
-        return data.version;
-      }
+    interface UpdateStatus {
+      version?: string;
+      [key: string]: unknown;
     }
-  } catch {}
+    const data = await apiRequest<UpdateStatus>('/api/update/status');
+    if (data?.version) {
+      return data.version;
+    }
+  } catch {
+    // Return default version on error
+  }
   return APP_VERSION;
 }
 

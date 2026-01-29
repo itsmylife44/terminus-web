@@ -3,34 +3,15 @@
  * Client-side functions for managing PTY terminal sessions
  */
 
-export type PtySessionStatus = 'active' | 'disconnected' | 'closed';
+import { apiRequest } from '@/lib/utils/api-request';
+import type {
+  PtySessionStatus,
+  PtySession,
+  CreatePtySessionInput,
+  UpdatePtySessionInput,
+} from '@/lib/types/pty-sessions';
 
-export interface PtySession {
-  id: string;
-  pty_id: string;
-  title: string;
-  status: PtySessionStatus;
-  created_at: string;
-  last_connected_at: string;
-  cols: number;
-  rows: number;
-  occupied?: boolean;
-}
-
-export interface CreatePtySessionInput {
-  id: string;
-  pty_id: string;
-  title?: string;
-  cols?: number;
-  rows?: number;
-}
-
-export interface UpdatePtySessionInput {
-  title?: string;
-  status?: PtySessionStatus;
-  cols?: number;
-  rows?: number;
-}
+export type { PtySessionStatus, PtySession, CreatePtySessionInput, UpdatePtySessionInput };
 
 const API_BASE = '/api/pty-sessions';
 
@@ -39,47 +20,32 @@ const API_BASE = '/api/pty-sessions';
  */
 export async function fetchPtySessions(includeAll = false): Promise<PtySession[]> {
   const url = includeAll ? `${API_BASE}?all=true` : API_BASE;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch PTY sessions');
-  }
-
-  return response.json();
+  return apiRequest<PtySession[]>(url);
 }
 
 /**
  * Fetch a single PTY session by ID
  */
 export async function fetchPtySession(id: string): Promise<PtySession | null> {
-  const response = await fetch(`${API_BASE}/${id}`);
-
-  if (response.status === 404) {
-    return null;
+  try {
+    return await apiRequest<PtySession>(`${API_BASE}/${id}`);
+  } catch (error) {
+    // Check if it's a 404 error
+    if (error instanceof Error && error.message.includes('404')) {
+      return null;
+    }
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch PTY session');
-  }
-
-  return response.json();
 }
 
 /**
  * Create a new PTY session record
  */
 export async function createPtySession(input: CreatePtySessionInput): Promise<PtySession> {
-  const response = await fetch(API_BASE, {
+  return apiRequest<PtySession>(API_BASE, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to create PTY session');
-  }
-
-  return response.json();
 }
 
 /**
@@ -89,29 +55,24 @@ export async function updatePtySession(
   id: string,
   input: UpdatePtySessionInput
 ): Promise<PtySession> {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  return apiRequest<PtySession>(`${API_BASE}/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to update PTY session');
-  }
-
-  return response.json();
 }
 
 /**
  * Delete a PTY session
  */
 export async function deletePtySession(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${id}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok && response.status !== 404) {
-    throw new Error('Failed to delete PTY session');
+  try {
+    await apiRequest<void>(`${API_BASE}/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    // 404 is acceptable (session already deleted)
+    if (error instanceof Error && error.message.includes('404')) {
+      return;
+    }
+    throw error;
   }
 }
 
@@ -140,18 +101,10 @@ export async function reactivatePtySession(id: string): Promise<PtySession> {
  * Rename a PTY session
  */
 export async function renamePtySession(id: string, title: string): Promise<PtySession> {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const result = await apiRequest<{ data: PtySession }>(`${API_BASE}/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to rename session');
-  }
-
-  const result = await response.json();
   return result.data;
 }
 
@@ -159,13 +112,5 @@ export async function renamePtySession(id: string, title: string): Promise<PtySe
  * Take over an occupied session by disconnecting other clients
  */
 export async function takeoverPtySession(ptyId: string): Promise<void> {
-  const response = await fetch(`/pty/${ptyId}/takeover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || 'Failed to take over session');
-  }
+  await apiRequest<void>(`/pty/${ptyId}/takeover`, { method: 'POST' });
 }

@@ -4,38 +4,20 @@
  */
 
 import { getDb } from './index';
+import type {
+  PtySessionStatus,
+  PtySession,
+  CreatePtySessionInput,
+  UpdatePtySessionInput,
+} from '@/lib/types/pty-sessions';
 
-export type PtySessionStatus = 'active' | 'disconnected' | 'closed';
-
-export interface PtySession {
-  id: string;
-  pty_id: string;
-  title: string;
-  status: PtySessionStatus;
-  created_at: string;
-  last_connected_at: string;
-  cols: number;
-  rows: number;
-  occupied?: boolean;
-  last_client_id?: string;
-  tmux_session_name?: string;
-}
-
-export interface CreatePtySessionInput {
-  id: string;
-  pty_id: string;
-  title?: string;
-  cols?: number;
-  rows?: number;
-}
-
-export interface UpdatePtySessionInput {
-  title?: string;
-  status?: PtySessionStatus;
-  last_connected_at?: string;
-  cols?: number;
-  rows?: number;
-}
+// Re-export types for backward compatibility
+export type {
+  PtySessionStatus,
+  PtySession,
+  CreatePtySessionInput,
+  UpdatePtySessionInput,
+} from '@/lib/types/pty-sessions';
 
 /**
  * Get all PTY sessions, optionally filtered by status

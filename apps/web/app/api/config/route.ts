@@ -3,7 +3,8 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
-import { parse, modify, applyEdits } from 'jsonc-parser';
+import { modifyJsoncFile } from '@/lib/config/jsonc-utils';
+import { parse } from 'jsonc-parser';
 
 // Whitelist of allowed config files
 const ALLOWED_FILES = {
@@ -86,19 +87,14 @@ async function writeConfigFile(filename: AllowedFile, content: string): Promise<
   }
 
   // File exists - preserve comments using jsonc-parser
-  const originalContent = await readFile(filepath, 'utf-8');
   const newConfig = JSON.parse(content);
 
   // Apply edits for each top-level key to preserve comments
-  let modifiedContent = originalContent;
   for (const [key, value] of Object.entries(newConfig)) {
-    const edits = modify(modifiedContent, [key], value, {
+    modifyJsoncFile(filepath, [key], value, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
     });
-    modifiedContent = applyEdits(modifiedContent, edits);
   }
-
-  await writeFile(filepath, modifiedContent, 'utf-8');
 }
 
 function validateJsonSyntax(content: string): { valid: boolean; error?: string } {

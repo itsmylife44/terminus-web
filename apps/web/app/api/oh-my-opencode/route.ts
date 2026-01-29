@@ -1,11 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
+import { readFile, unlink, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
-import { parse, modify, applyEdits } from 'jsonc-parser';
+import { modifyJsoncFile } from '@/lib/config/jsonc-utils';
+import { parse } from 'jsonc-parser';
 
 const execAsync = promisify(exec);
 
@@ -75,8 +76,7 @@ async function readOpencodeConfig(): Promise<{ content: string; config: Record<s
   }
 }
 
-async function writeOpencodeConfig(originalContent: string, pluginArray: string[]): Promise<void> {
-  const configPath = getConfigPath();
+async function writeOpencodeConfig(configPath: string, pluginArray: string[]): Promise<void> {
   const configDir = dirname(configPath);
 
   // Ensure directory exists
@@ -85,12 +85,9 @@ async function writeOpencodeConfig(originalContent: string, pluginArray: string[
   }
 
   // Use jsonc-parser to modify while preserving comments
-  const edits = modify(originalContent, ['plugin'], pluginArray, {
+  modifyJsoncFile(configPath, ['plugin'], pluginArray, {
     formattingOptions: { tabSize: 2, insertSpaces: true },
   });
-  const newContent = applyEdits(originalContent, edits);
-
-  await writeFile(configPath, newContent, 'utf-8');
 }
 
 async function getInstalledVersion(): Promise<string | undefined> {
@@ -219,7 +216,7 @@ async function handleInstall(body: InstallRequest): Promise<Response> {
 
 async function handleUninstall(): Promise<Response> {
   try {
-    const { content, config } = await readOpencodeConfig();
+    const { config } = await readOpencodeConfig();
 
     // Get current plugins array
     const currentPlugins = (config.plugin as string[]) || [];
@@ -229,7 +226,7 @@ async function handleUninstall(): Promise<Response> {
     );
 
     // Write updated config (preserving comments and formatting)
-    await writeOpencodeConfig(content, newPlugins);
+    await writeOpencodeConfig(getConfigPath(), newPlugins);
 
     // Delete plugin config file if it exists
     const pluginConfigPath = getPluginConfigPath();

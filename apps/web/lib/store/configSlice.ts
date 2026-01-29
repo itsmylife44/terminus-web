@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { apiRequest } from '@/lib/utils/api-request';
 import { openCodeClient, type OpenCodeConfig } from '../api/client';
 
 export interface ConfigState {
@@ -42,37 +43,11 @@ export const saveConfig = createAsyncThunk<
   { rejectValue: string }
 >('config/saveConfig', async (configUpdates, { rejectWithValue }) => {
   try {
-    // Note: Assuming openCodeClient will have a saveConfig or updateConfig method
-    // For now, we'll call fetch directly similar to getConfig pattern
-    const response = await fetch('/api/opencode/config', {
+    const result = await apiRequest<OpenCodeConfig>('/api/opencode/config', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(typeof window !== 'undefined' && sessionStorage.getItem('opencode_auth')
-          ? (() => {
-              const { username, password } = JSON.parse(sessionStorage.getItem('opencode_auth')!);
-              return {
-                Authorization: `Basic ${btoa(`${username}:${password}`)}`,
-              };
-            })()
-          : {}),
-      },
       body: JSON.stringify(configUpdates),
     });
-
-    if (response.status === 401) {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('opencode:auth_error'));
-      }
-      throw new Error('Unauthorized');
-    }
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : configUpdates;
+    return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to save config';
     return rejectWithValue(message);

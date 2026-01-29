@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { Terminal } from 'ghostty-web';
+import { apiRequest } from '@/lib/utils/api-request';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { getPtyBaseUrl, getBasicAuthHeader, getAuthenticatedWsUrl } from '@/lib/utils';
 import {
@@ -66,17 +67,16 @@ export function useTerminalConnection(
 
       // If we have an existing PTY ID, verify it still exists on the backend
       if (ptyId && isReconnectRef.current) {
-        const checkResponse = await fetch(`${baseUrl}/pty/${ptyId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authHeader && { Authorization: authHeader }),
-          },
-          body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
-        });
-
-        if (checkResponse.status === 404) {
-          needsNewSession = true;
+        try {
+          await apiRequest<void>(`${baseUrl}/pty/${ptyId}`, {
+            method: 'PUT',
+            headers: authHeader ? { Authorization: authHeader } : undefined,
+            body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
+          });
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('404')) {
+            needsNewSession = true;
+          }
         }
       }
 
@@ -85,24 +85,20 @@ export function useTerminalConnection(
 
         const opencodeCommand = process.env.NEXT_PUBLIC_OPENCODE_COMMAND || undefined;
 
-        const response = await fetch(`${baseUrl}/pty`, {
+        interface PtySession {
+          id: string;
+          [key: string]: unknown;
+        }
+
+        const ptySession = await apiRequest<PtySession>(`${baseUrl}/pty`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authHeader && { Authorization: authHeader }),
-          },
+          headers: authHeader ? { Authorization: authHeader } : undefined,
           body: JSON.stringify({
             cols: terminal.cols,
             rows: terminal.rows,
             ...(opencodeCommand && { command: opencodeCommand }),
           }),
         });
-
-        if (!response.ok) {
-          throw new Error(`Failed to create PTY: ${response.status}`);
-        }
-
-        const ptySession = await response.json();
         ptyId = ptySession.id;
         ptyIdRef.current = ptyId;
         isReconnectRef.current = true;
@@ -123,15 +119,11 @@ export function useTerminalConnection(
       } else {
         // Fetch scrollback before reconnecting (not on fresh session)
         try {
-          const scrollbackResponse = await fetch(`${baseUrl}/pty/${ptyId}/scrollback`, {
+          const scrollback = await apiRequest<string>(`${baseUrl}/pty/${ptyId}/scrollback`, {
             headers: authHeader ? { Authorization: authHeader } : undefined,
           });
-
-          if (scrollbackResponse.ok) {
-            const scrollback = await scrollbackResponse.text();
-            if (scrollback) {
-              terminal.write(scrollback);
-            }
+          if (scrollback) {
+            terminal.write(scrollback);
           }
         } catch (err) {
           console.warn('[PTY] Failed to fetch scrollback:', err);
@@ -162,12 +154,9 @@ export function useTerminalConnection(
         );
 
         // Send resize to trigger TUI redraw (SIGWINCH)
-        await fetch(`${baseUrl}/pty/${ptyId}`, {
+        apiRequest<void>(`${baseUrl}/pty/${ptyId}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authHeader && { Authorization: authHeader }),
-          },
+          headers: authHeader ? { Authorization: authHeader } : undefined,
           body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
         }).catch(() => {});
 
@@ -175,22 +164,16 @@ export function useTerminalConnection(
         if (!needsNewSession) {
           setTimeout(async () => {
             // Send slightly different size, then correct size to trigger SIGWINCH
-            await fetch(`${baseUrl}/pty/${ptyId}`, {
+            apiRequest<void>(`${baseUrl}/pty/${ptyId}`, {
               method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(authHeader && { Authorization: authHeader }),
-              },
+              headers: authHeader ? { Authorization: authHeader } : undefined,
               body: JSON.stringify({ size: { cols: terminal.cols - 1, rows: terminal.rows } }),
             }).catch(() => {});
 
             setTimeout(async () => {
-              await fetch(`${baseUrl}/pty/${ptyId}`, {
+              apiRequest<void>(`${baseUrl}/pty/${ptyId}`, {
                 method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(authHeader && { Authorization: authHeader }),
-                },
+                headers: authHeader ? { Authorization: authHeader } : undefined,
                 body: JSON.stringify({ size: { cols: terminal.cols, rows: terminal.rows } }),
               }).catch(() => {});
             }, 50);
@@ -311,12 +294,9 @@ export function useTerminalConnection(
     const disposable = terminal.onResize(({ cols, rows }) => {
       if (ptyIdRef.current) {
         const authHeader = getBasicAuthHeader();
-        fetch(`${baseUrl}/pty/${ptyIdRef.current}`, {
+        apiRequest<void>(`${baseUrl}/pty/${ptyIdRef.current}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authHeader && { Authorization: authHeader }),
-          },
+          headers: authHeader ? { Authorization: authHeader } : undefined,
           body: JSON.stringify({ size: { cols, rows } }),
         }).catch(console.error);
       }

@@ -10,11 +10,13 @@ import {
   updatePtySession as apiUpdatePtySession,
   deletePtySession as apiDeletePtySession,
   renamePtySession as apiRenamePtySession,
-  type PtySession,
-  type CreatePtySessionInput,
-  type UpdatePtySessionInput,
-  type PtySessionStatus,
 } from '@/lib/api/pty-sessions';
+import type {
+  PtySession,
+  CreatePtySessionInput,
+  UpdatePtySessionInput,
+  PtySessionStatus,
+} from '@/lib/types/pty-sessions';
 
 export interface PtySessionsState {
   sessions: PtySession[];
