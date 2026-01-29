@@ -107,12 +107,19 @@ async function checkProcessRunning(pid: number): Promise<boolean> {
  */
 async function forceUnlock(lockPath: string): Promise<void> {
   try {
-    // proper-lockfile creates a .lock directory, remove it
-    await fs.rm(`${lockPath}.lock`, { recursive: true, force: true });
-    console.log(`Successfully forced unlock of ${lockPath}`);
-  } catch (error) {
-    console.warn('Failed to force unlock:', error);
+    // Try proper unlock first
+    await unlock(lockPath);
+  } catch {
+    // If that fails, force remove lock directory
+    try {
+      await fs.rm(`${lockPath}.lock`, { recursive: true, force: true });
+    } catch {
+      // Even if removal fails, continue
+    }
   }
+
+  // Clear in-memory flag
+  isUpdating = false;
 }
 
 /**
@@ -121,7 +128,6 @@ async function forceUnlock(lockPath: string): Promise<void> {
  * This provides backward compatibility during transition period.
  */
 export async function getUpdateStatus(): Promise<boolean> {
-  // Check legacy in-memory flag first
   if (isUpdating) {
     return true;
   }
@@ -130,11 +136,21 @@ export async function getUpdateStatus(): Promise<boolean> {
     const dir = await ensureLockDirectory();
     const lockPath = getLockPath(dir);
 
-    // Check if lock file exists and is locked
+    // Check if lock file exists first
+    try {
+      await fs.access(lockPath);
+    } catch {
+      // No lock file = no update running
+      return false;
+    }
+
+    // Now safely check if locked
     return await check(lockPath);
   } catch (error) {
-    // If we can't check the lock, assume no update is running
-    console.warn('Failed to check update lock status:', error);
+    console.warn(
+      'Failed to check update lock status:',
+      error instanceof Error ? error.message : 'Unknown error'
+    );
     return false;
   }
 }
@@ -148,32 +164,52 @@ export async function acquireUpdateLock(): Promise<void> {
   const dir = await ensureLockDirectory();
   const lockPath = getLockPath(dir);
 
-  // Check for stale lock first
-  const isLocked = await check(lockPath);
+  // Ensure the lock file exists before checking
+  try {
+    await fs.access(lockPath);
+  } catch {
+    // File doesn't exist, create empty file for locking
+    try {
+      await fs.writeFile(lockPath, '');
+    } catch (error) {
+      console.warn('Failed to create lock file:', error);
+    }
+  }
+
+  // Now safely check for existing lock
+  let isLocked = false;
+  try {
+    isLocked = await check(lockPath);
+  } catch (error) {
+    // If check fails, assume not locked
+    console.log(
+      'Lock check failed, assuming unlocked:',
+      error instanceof Error ? error.message : 'Unknown error'
+    );
+    isLocked = false;
+  }
+
   if (isLocked) {
+    // Check for stale lock...
     const metadata = await readMetadata(dir);
     if (metadata) {
       const lockAge = Date.now() - new Date(metadata.timestamp).getTime();
       const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+      const isStale = lockAge > STALE_THRESHOLD;
+      const isProcessDead = !(await checkProcessRunning(metadata.pid));
 
-      if (lockAge > STALE_THRESHOLD) {
+      if (isStale || isProcessDead) {
         console.log(
-          `[Update] Removing stale lock (${lockAge}ms old, threshold: ${STALE_THRESHOLD}ms)`
+          `[Update] Removing stale lock (age: ${lockAge}ms, process dead: ${isProcessDead})`
         );
         await forceUnlock(lockPath);
-      } else {
-        // Check if process is still running
-        const isRunning = await checkProcessRunning(metadata.pid);
-        if (!isRunning) {
-          console.log(`[Update] Removing lock from dead process (PID ${metadata.pid})`);
-          await forceUnlock(lockPath);
-        }
+        isLocked = false;
       }
     }
   }
 
+  // Acquire the lock with proper error handling
   try {
-    // Acquire file lock with extended stale timeout
     await lock(lockPath, {
       retries: {
         retries: 2,
@@ -183,28 +219,25 @@ export async function acquireUpdateLock(): Promise<void> {
       realpath: false,
     });
 
-    // Set legacy flag for backward compatibility
     isUpdating = true;
-
-    // Write metadata for debugging
     await writeMetadata(dir);
   } catch (error) {
-    // If still can't acquire after cleanup, attempt one more force-unlock and retry
-    console.warn('[Update] Lock acquisition failed, attempting force cleanup and retry...');
+    // If lock fails, try force unlock and retry once
+    console.log(
+      'Lock acquisition failed, attempting force unlock:',
+      error instanceof Error ? error.message : 'Unknown error'
+    );
     await forceUnlock(lockPath);
 
     try {
       await lock(lockPath, {
-        retries: {
-          retries: 0,
-        },
+        retries: { retries: 0 },
         stale: 300000,
         realpath: false,
       });
-
       isUpdating = true;
       await writeMetadata(dir);
-    } catch (retryError) {
+    } catch (finalError) {
       // Check if another process holds the lock
       const metadata = await readMetadata(dir);
       const details = metadata
@@ -212,7 +245,7 @@ export async function acquireUpdateLock(): Promise<void> {
         : '';
 
       throw new Error(
-        `Failed to acquire update lock${details}: ${retryError instanceof Error ? retryError.message : 'Unknown error'}`
+        `Failed to acquire update lock${details}: ${finalError instanceof Error ? finalError.message : 'Unknown error'}`
       );
     }
   }
