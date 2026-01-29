@@ -10,6 +10,7 @@ import AuthGate from '@/components/layout/AuthGate';
 import { Sidebar } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { AmbientBackground } from '@/components/effects/AmbientBackground';
+import { ToastContainer } from '@/components/ui/toast';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="antialiased min-h-screen font-sans bg-background-base">
         <AmbientBackground />
         <ReduxProvider>
+          <ToastContainer />
           <AuthGate>
             {showLayout ? (
               <>

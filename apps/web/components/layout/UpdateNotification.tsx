@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUpCircle, Download, Loader2, Check } from 'lucide-react';
+import { Download, Loader2, Check } from 'lucide-react';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import {
@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { UpdateConfirmDialog } from '@/components/layout/UpdateConfirmDialog';
 import { UpdateProgressModal } from '@/components/layout/UpdateProgressModal';
 import { useAutoUpdate } from '@/hooks/useAutoUpdate';
+import { Portal } from '@/components/ui/portal';
 
 const STAGE_LABELS = {
   preparing: 'Preparing update...',
@@ -28,9 +29,15 @@ const STAGE_LABELS = {
   rolling_back: 'Rolling back changes...',
 };
 
+interface DropdownPosition {
+  top: number;
+  left: number;
+}
+
 export function UpdateNotification() {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>({ top: 0, left: 0 });
   const [runtimeVersion, setRuntimeVersion] = useState<string | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
 
@@ -55,7 +62,7 @@ export function UpdateNotification() {
   } = useAppSelector((state) => state.update);
 
   // Version check (existing)
-  const { updateAvailable, latestVersion, releaseUrl, isLoading } = useVersionCheck();
+  const { updateAvailable, latestVersion, releaseUrl } = useVersionCheck();
 
   const { triggerUpdate } = useAutoUpdate();
 
@@ -144,7 +151,7 @@ export function UpdateNotification() {
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -200,30 +207,47 @@ export function UpdateNotification() {
   const hasUpdate = reduxUpdateAvailable || updateAvailable;
   const displayLatestVersion = reduxLatestVersion || latestVersion;
 
+  const calculateDropdownPosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setDropdownPosition({
+      top: rect.bottom + 8,
+      left: rect.right,
+    });
+  };
+
+  const handleOpenDropdown = () => {
+    setIsOpen(true);
+    calculateDropdownPosition();
+  };
+
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
-        {/* Trigger Button */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="group relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground-muted hover:text-foreground transition-all duration-200 rounded-md hover:bg-white/5"
-        >
-          <span className="font-mono tracking-tight">v{displayVersion}</span>
-          {hasUpdate && (
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-          )}
-        </button>
+      {/* Trigger Button */}
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleOpenDropdown}
+        className="group relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground-muted hover:text-foreground transition-all duration-200 rounded-md hover:bg-white/5"
+      >
+        <span className="font-mono tracking-tight">v{displayVersion}</span>
+        {hasUpdate && (
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+        )}
+      </button>
 
-        {/* Dropdown Panel */}
-        {isOpen && (
+      {/* Dropdown Panel - Portal */}
+      {isOpen && (
+        <Portal>
           <div
-            className="absolute top-full right-0 mt-2 w-72 bg-background-elevated/80 backdrop-blur-xl border border-white/6 rounded-lg shadow-2xl z-50 overflow-hidden"
+            className="fixed w-72 bg-background-elevated/80 backdrop-blur-xl border border-white/6 rounded-lg shadow-2xl z-50 overflow-hidden"
             style={{
               animation: 'slideDown 0.2s ease-out',
+              top: `${dropdownPosition.top}px`,
+              right: `${typeof window !== 'undefined' ? window.innerWidth - dropdownPosition.left : 0}px`,
             }}
           >
             {/* Header */}
@@ -343,8 +367,8 @@ export function UpdateNotification() {
               )}
             </div>
           </div>
-        )}
-      </div>
+        </Portal>
+      )}
 
       {/* Confirmation Dialog */}
       <UpdateConfirmDialog

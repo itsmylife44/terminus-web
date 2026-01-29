@@ -38,18 +38,27 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { id, pty_id, title, cols, rows } = body;
+    let { id, pty_id, title, cols, rows } = body;
 
-    if (!id || !pty_id) {
-      return NextResponse.json({ error: 'Missing required fields: id, pty_id' }, { status: 400 });
+    if (!id) {
+      id = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    if (!pty_id) {
+      pty_id = `pty-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    if (!title) {
+      const existingSessions = getActivePtySessions();
+      title = `Terminal ${existingSessions.length + 1}`;
     }
 
     const session = createPtySession({
       id,
       pty_id,
-      title,
-      cols,
-      rows,
+      title: title || `Terminal`,
+      cols: cols || 80,
+      rows: rows || 24,
     });
 
     return NextResponse.json(session, { status: 201 });

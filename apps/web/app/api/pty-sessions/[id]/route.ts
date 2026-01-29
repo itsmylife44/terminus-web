@@ -102,8 +102,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const deleted = deletePtySession(id);
 
+    const session = getPtySession(id);
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const OPENCODE_URL = process.env.OPENCODE_INTERNAL_URL || 'http://localhost:3001';
+    const authHeader =
+      process.env.OPENCODE_AUTH_USER && process.env.OPENCODE_AUTH_PASSWORD
+        ? `Basic ${Buffer.from(`${process.env.OPENCODE_AUTH_USER}:${process.env.OPENCODE_AUTH_PASSWORD}`).toString('base64')}`
+        : undefined;
+
+    try {
+      const killResponse = await fetch(`${OPENCODE_URL}/pty/${session.pty_id}`, {
+        method: 'DELETE',
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+      });
+
+      if (!killResponse.ok && killResponse.status !== 404) {
+        console.warn(`Failed to kill PTY process ${session.pty_id}: ${killResponse.status}`);
+      }
+    } catch (error) {
+      console.warn('Failed to connect to PTY backend for process termination:', error);
+    }
+
+    const deleted = deletePtySession(id);
     if (!deleted) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
