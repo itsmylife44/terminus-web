@@ -296,25 +296,8 @@ export async function POST(request: NextRequest) {
 
       await sendEvent({ stage: 'pulling', progress: 40, message: 'Latest changes pulled' });
 
-      // Ensure workspace packages have dependencies after git pull - critical!
-      await sendEvent({
-        stage: 'installing',
-        progress: 45,
-        message: 'Preparing workspace dependencies...',
-      });
-      try {
-        await execWithTimeout('npm install', `${repoRoot}/packages/shared`);
-      } catch {
-        // Continue even if this fails
-      }
-      try {
-        await execWithTimeout('npm install', `${repoRoot}/apps/web`);
-      } catch {
-        // Continue even if this fails
-      }
-
       // Stage: Installing - with dependency resolution
-      await sendEvent({ stage: 'installing', progress: 50, message: 'Installing dependencies...' });
+      await sendEvent({ stage: 'installing', progress: 45, message: 'Installing dependencies...' });
 
       // Backup package-lock.json before npm install for rollback
       try {
@@ -324,18 +307,22 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        await execWithTimeout('npm install', repoRoot);
+        await execWithTimeout('npm install --workspaces --include-workspace-root', repoRoot);
       } catch (installError) {
         await sendEvent({ stage: 'installing', progress: 55, message: 'Fixing dependencies...' });
 
-        // Clean install attempt
+        // Clean install attempt with workspaces
         try {
           await execWithTimeout('rm -rf node_modules package-lock.json', repoRoot);
-          await execWithTimeout('npm install', repoRoot);
+          await execWithTimeout('rm -rf packages/*/node_modules apps/*/node_modules', repoRoot);
+          await execWithTimeout('npm ci --workspaces --include-workspace-root', repoRoot);
         } catch {
-          // Force install with legacy peer deps if needed
+          // Fallback: regular install with legacy peer deps
           try {
-            await execWithTimeout('npm install --legacy-peer-deps', repoRoot);
+            await execWithTimeout(
+              'npm install --workspaces --include-workspace-root --legacy-peer-deps',
+              repoRoot
+            );
           } catch {
             throw new Error('Failed to install dependencies after multiple attempts');
           }
