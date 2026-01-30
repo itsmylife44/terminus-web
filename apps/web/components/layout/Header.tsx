@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { logout } from '@/lib/store/authSlice';
 import { ConnectionStatus } from '@/components/terminal/ConnectionStatus';
+import SystemMetrics from '@/components/ui/SystemMetrics';
+import useMetricsSSE from '@/hooks/useMetricsSSE';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -13,6 +15,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const username = useAppSelector((state) => state.auth.username);
+  
+  // Connect to metrics SSE stream
+  useMetricsSSE();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -48,8 +53,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
         )}
       </div>
 
-      {/* Right: Status + User + Logout */}
+      {/* Right: Metrics + Status + User + Logout */}
       <div className="flex items-center gap-4">
+        <SystemMetrics />
         <ConnectionStatus />
         {username && (
           <span className="text-sm text-foreground-muted hidden sm:inline-block">{username}</span>
