@@ -5,6 +5,7 @@ import sessionsReducer from './sessionsSlice';
 import tabsReducer from './tabsSlice';
 import configReducer from './configSlice';
 import ptySessionsReducer from './ptySessionsSlice';
+import metricsReducer from './metricsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     tabs: tabsReducer,
     config: configReducer,
     ptySessions: ptySessionsReducer,
+    metrics: metricsReducer,
   },
 });
 
